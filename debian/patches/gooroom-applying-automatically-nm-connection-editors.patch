@@ -1,0 +1,12 @@
+--- a/src/connection-editor/nm-connection-editor.c
++++ b/src/connection-editor/nm-connection-editor.c
+@@ -964,6 +964,9 @@ ok_button_clicked_save_connection (NMCon
+ 		nm_remote_connection_commit_changes (NM_REMOTE_CONNECTION (self->orig_connection),
+ 		                                     updated_connection_cb, self);
+ 	}
++
++	nm_client_networking_set_enabled (self->client, FALSE);
++	nm_client_networking_set_enabled (self->client, TRUE);
+ }
+ 
+ static void

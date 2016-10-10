@@ -17,3 +17,4 @@ hide_virtual_devices.patch
 lp1440009_flashback.patch
 lp1418260_dont_crash_if_mm_isnt_avail.patch
 nm-applet-fix-shell-version.patch
+gooroom-applying-automatically-nm-connection-editors.patch
