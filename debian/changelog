@@ -1,3 +1,11 @@
+network-manager-applet (0.9.10.1-0ubuntu7+grm1) gooroom-1.0; urgency=medium
+
+  * remove dh-translations in control and rules
+  * set pristine-tar to False in gbp.conf
+  * add gooroom-applying-automatically-nm-connection-editors.patch
+
+ -- jongkyung.woo <jkwoo@gooroom.kr>  Mon, 10 Oct 2016 20:21:17 +0900
+
 network-manager-applet (0.9.10.1-0ubuntu7) wily; urgency=medium
 
   * Rebuild for libgnome-bluetooth soname change
