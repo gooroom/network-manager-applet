@@ -26,7 +26,6 @@ Build-Depends:
  libgudev-1.0-dev (>= 147),
  iso-codes,
  libgirepository1.0-dev,
- dh-translations,
  libappindicator3-dev,
  gobject-introspection
 Standards-Version: 3.9.5
