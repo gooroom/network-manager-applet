@@ -17,23 +17,17 @@
  * with this program; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
- * (C) Copyright 2008 - 2011 Red Hat, Inc.
+ * Copyright 2008 - 2014 Red Hat, Inc.
  */
 
-#include <config.h>
+#include "nm-default.h"
 
 #include <net/ethernet.h>
 #include <netinet/ether.h>
 #include <string.h>
 #include <stdlib.h>
 
-#include <glib/gi18n.h>
-
-#include <nm-setting-connection.h>
-#include <nm-utils.h>
-
 #include "ce-page.h"
-#include "nma-marshal.h"
 
 G_DEFINE_ABSTRACT_TYPE (CEPage, ce_page, G_TYPE_OBJECT)
 
@@ -76,7 +70,7 @@ spin_output_with_default_string (GtkSpinButton *spin,
 	return TRUE;
 }
 
-gboolean
+static gboolean
 ce_spin_output_with_automatic (GtkSpinButton *spin, gpointer user_data)
 {
 	return spin_output_with_default_string (spin,
@@ -84,12 +78,69 @@ ce_spin_output_with_automatic (GtkSpinButton *spin, gpointer user_data)
 	                                        _("automatic"));
 }
 
-gboolean
+static gboolean
 ce_spin_output_with_default (GtkSpinButton *spin, gpointer user_data)
 {
 	return spin_output_with_default_string (spin,
 	                                        GPOINTER_TO_INT (user_data),
 	                                        _("default"));
+}
+
+static gint
+spin_input_with_default_string (GtkSpinButton *spin,
+                                int defvalue,
+                                gdouble *new_val,
+                                const char *defstring)
+{
+	const gchar *buf;
+
+	buf = gtk_entry_get_text (GTK_ENTRY (spin));
+	if (strcmp (buf, defstring) == 0) {
+		*new_val = defvalue;
+		return TRUE;
+	}
+
+	return FALSE;
+}
+
+static gint
+ce_spin_input_with_automatic (GtkSpinButton *spin, gdouble *new_val, gpointer user_data)
+{
+	return spin_input_with_default_string (spin,
+	                                       GPOINTER_TO_INT (user_data),
+	                                       new_val,
+	                                       _("automatic"));
+}
+
+static gint
+ce_spin_input_with_default (GtkSpinButton *spin, gdouble *new_val, gpointer user_data)
+{
+	return spin_input_with_default_string (spin,
+	                                       GPOINTER_TO_INT (user_data),
+	                                       new_val,
+	                                       _("default"));
+}
+
+void
+ce_spin_automatic_val (GtkSpinButton *spin, int defvalue)
+{
+	g_signal_connect (spin, "output",
+	                  G_CALLBACK (ce_spin_output_with_automatic),
+	                  GINT_TO_POINTER (defvalue));
+	g_signal_connect (spin, "input",
+	                  G_CALLBACK (ce_spin_input_with_automatic),
+	                  GINT_TO_POINTER (defvalue));
+}
+
+void
+ce_spin_default_val (GtkSpinButton *spin, int defvalue)
+{
+	g_signal_connect (spin, "output",
+	                  G_CALLBACK (ce_spin_output_with_default),
+	                  GINT_TO_POINTER (defvalue));
+	g_signal_connect (spin, "input",
+	                  G_CALLBACK (ce_spin_input_with_default),
+	                  GINT_TO_POINTER (defvalue));
 }
 
 int
@@ -132,161 +183,392 @@ ce_page_validate (CEPage *self, NMConnection *connection, GError **error)
 	g_return_val_if_fail (CE_IS_PAGE (self), FALSE);
 	g_return_val_if_fail (NM_IS_CONNECTION (connection), FALSE);
 
-	if (CE_PAGE_GET_CLASS (self)->validate)
-		return CE_PAGE_GET_CLASS (self)->validate (self, connection, error);
+	if (CE_PAGE_GET_CLASS (self)->ce_page_validate_v) {
+		if (!CE_PAGE_GET_CLASS (self)->ce_page_validate_v (self, connection, error)) {
+			if (error && !*error)
+				g_set_error_literal (error, NMA_ERROR, NMA_ERROR_GENERIC, _("unspecified error"));
+			return FALSE;
+		}
+	}
 
 	return TRUE;
 }
 
-char **
-ce_page_get_mac_list (CEPage *self, GType device_type, const char *mac_property)
+gboolean
+ce_page_last_update (CEPage *self, NMConnection *connection, GError **error)
 {
-	const GPtrArray *devices;
-	GPtrArray *macs;
-	int i;
+	g_return_val_if_fail (CE_IS_PAGE (self), FALSE);
+	g_return_val_if_fail (NM_IS_CONNECTION (connection), FALSE);
 
-	g_return_val_if_fail (CE_IS_PAGE (self), NULL);
+	if (CE_PAGE_GET_CLASS (self)->last_update)
+		return CE_PAGE_GET_CLASS (self)->last_update (self, connection, error);
 
-	if (!self->client)
-		return NULL;
-
-	macs = g_ptr_array_new ();
-	devices = nm_client_get_devices (self->client);
-	for (i = 0; devices && (i < devices->len); i++) {
-		NMDevice *dev = g_ptr_array_index (devices, i);
-		const char *iface;
-		char *mac, *item;
-
-		if (!G_TYPE_CHECK_INSTANCE_TYPE (dev, device_type))
-			continue;
-
-		g_object_get (G_OBJECT (dev), mac_property, &mac, NULL);
-		iface = nm_device_get_iface (NM_DEVICE (dev));
-		item = g_strdup_printf ("%s (%s)", mac, iface);
-		g_free (mac);
-		g_ptr_array_add (macs, item);
-	}
-
-	g_ptr_array_add (macs, NULL);
-	return (char **)g_ptr_array_free (macs, FALSE);
+	return TRUE;
 }
 
+gboolean
+ce_page_inter_page_change (CEPage *self)
+{
+	gboolean ret = FALSE;
+
+	g_return_val_if_fail (CE_IS_PAGE (self), FALSE);
+
+	if (self->inter_page_change_running)
+		return FALSE;
+
+	self->inter_page_change_running = TRUE;
+	if (CE_PAGE_GET_CLASS (self)->inter_page_change)
+		ret = CE_PAGE_GET_CLASS (self)->inter_page_change (self);
+	self->inter_page_change_running = FALSE;
+
+	return ret;
+}
+
+static void
+_set_active_combo_item (GtkComboBox *combo, const char *item,
+                        const char *combo_item, int combo_idx)
+{
+	GtkWidget *entry;
+
+	if (item) {
+		/* set active item */
+		gtk_combo_box_set_active (combo, combo_idx);
+
+		if (!combo_item)
+			gtk_combo_box_text_prepend_text (GTK_COMBO_BOX_TEXT (combo), item);
+
+		entry = gtk_bin_get_child (GTK_BIN (combo));
+		if (entry)
+			gtk_entry_set_text (GTK_ENTRY (entry), combo_item ? combo_item : item);
+	}
+}
+
+/* Combo box storing data in the form of "text1 (text2)" */
+void
+ce_page_setup_data_combo (CEPage *self, GtkComboBox *combo,
+                          const char *data, char **list)
+{
+	char **iter, *active_item = NULL;
+	int i, active_idx = -1;
+	int data_len;
+
+	if (data)
+		data_len = strlen (data);
+	else
+		data_len = -1;
+
+	for (iter = list, i = 0; iter && *iter; iter++, i++) {
+		gtk_combo_box_text_append_text (GTK_COMBO_BOX_TEXT (combo), *iter);
+		if (   data
+		    && g_ascii_strncasecmp (*iter, data, data_len) == 0
+		    && ((*iter)[data_len] == '\0' || (*iter)[data_len] == ' ')) {
+			active_item = *iter;
+			active_idx = i;
+		}
+	}
+	_set_active_combo_item (combo, data, active_item, active_idx);
+}
+
+/* Combo box storing MAC addresses only */
 void
 ce_page_setup_mac_combo (CEPage *self, GtkComboBox *combo,
-                         const char *current_mac, char **mac_list)
+                         const char *mac, char **mac_list)
 {
 	char **iter, *active_mac = NULL;
 	int i, active_idx = -1;
-	int current_mac_len;
-	GtkWidget *entry;
-
-	if (current_mac)
-		current_mac_len = strlen (current_mac);
-	else
-		current_mac_len = -1;
 
 	for (iter = mac_list, i = 0; iter && *iter; iter++, i++) {
 		gtk_combo_box_text_append_text (GTK_COMBO_BOX_TEXT (combo), *iter);
-		if (   current_mac
-		    && g_ascii_strncasecmp (*iter, current_mac, current_mac_len) == 0
-		    && ((*iter)[current_mac_len] == '\0' || (*iter)[current_mac_len] == ' ')) {
+		if (mac && *iter && nm_utils_hwaddr_matches (mac, -1, *iter, -1)) {
 			active_mac = *iter;
 			active_idx = i;
 		}
 	}
+	_set_active_combo_item (combo, mac, active_mac, active_idx);
+}
 
-	if (current_mac) {
-		/* set active item */
-		gtk_combo_box_set_active (combo, active_idx);
-		
-		if (!active_mac)
-			gtk_combo_box_text_prepend_text (GTK_COMBO_BOX_TEXT (combo), current_mac);
+gboolean
+ce_page_mac_entry_valid (GtkEntry *entry, int type, const char *property_name, GError **error)
+{
+	const char *mac;
 
-		entry = gtk_bin_get_child (GTK_BIN (combo));
-		if (entry)
-			gtk_entry_set_text (GTK_ENTRY (entry), active_mac ? active_mac : current_mac);
+	g_return_val_if_fail (GTK_IS_ENTRY (entry), FALSE);
+
+	mac = gtk_entry_get_text (entry);
+	if (mac && *mac) {
+		if (!nm_utils_hwaddr_valid (mac, nm_utils_hwaddr_len (type))) {
+			const char *addr_type;
+
+			addr_type = type == ARPHRD_ETHER ? _("MAC address") : _("HW address");
+			if (property_name) {
+				g_set_error (error, NMA_ERROR, NMA_ERROR_GENERIC,
+				             _("invalid %s for %s (%s)"),
+				             addr_type, property_name, mac);
+			} else {
+				g_set_error (error, NMA_ERROR, NMA_ERROR_GENERIC,
+				             _("invalid %s (%s)"),
+				             addr_type, mac);
+			}
+			return FALSE;
+		}
+	}
+	return TRUE;
+}
+
+gboolean
+ce_page_interface_name_valid (const char *iface, const char *property_name, GError **error)
+{
+	if (iface && *iface) {
+		if (!nm_utils_iface_valid_name (iface)) {
+			if (property_name) {
+				g_set_error (error, NMA_ERROR, NMA_ERROR_GENERIC,
+				             _("invalid interface-name for %s (%s)"),
+				             property_name, iface);
+			} else {
+				g_set_error (error, NMA_ERROR, NMA_ERROR_GENERIC,
+				             _("invalid interface-name (%s)"),
+				             iface);
+			}
+			return FALSE;
+		}
+	}
+	return TRUE;
+}
+
+static char **
+_get_device_list (CEPage *self,
+                  GType device_type,
+                  gboolean set_ifname,
+                  const char *mac_property,
+                  gboolean ifname_first)
+{
+	const GPtrArray *devices;
+	GPtrArray *interfaces;
+	int i;
+
+	g_return_val_if_fail (CE_IS_PAGE (self), NULL);
+	g_return_val_if_fail (set_ifname || mac_property, NULL);
+
+	if (!self->client)
+		return NULL;
+
+	interfaces = g_ptr_array_new ();
+	devices = nm_client_get_devices (self->client);
+	for (i = 0; i < devices->len; i++) {
+		NMDevice *dev = g_ptr_array_index (devices, i);
+		const char *ifname;
+		char *mac = NULL;
+		char *item;
+
+		if (!G_TYPE_CHECK_INSTANCE_TYPE (dev, device_type))
+			continue;
+
+		if (device_type == NM_TYPE_DEVICE_BT)
+			ifname = nm_device_bt_get_name (NM_DEVICE_BT (dev));
+		else
+			ifname = nm_device_get_iface (NM_DEVICE (dev));
+		if (mac_property)
+			g_object_get (G_OBJECT (dev), mac_property, &mac, NULL);
+
+		if (set_ifname && mac_property) {
+			if (ifname_first)
+				item = g_strdup_printf ("%s (%s)", ifname, mac);
+			else
+				item = g_strdup_printf ("%s (%s)", mac, ifname);
+		} else
+			item = g_strdup (set_ifname ? ifname : mac);
+
+		g_ptr_array_add (interfaces, item);
+		if (mac_property)
+			g_free (mac);
+	}
+	g_ptr_array_add (interfaces, NULL);
+
+	return (char **)g_ptr_array_free (interfaces, FALSE);
+}
+
+static gboolean
+_device_entry_parse (const char *entry_text, char **first, char **second)
+{
+	const char *sp, *left, *right;
+
+	if (!entry_text || !*entry_text) {
+		*first = NULL;
+		*second = NULL;
+		return TRUE;
+	}
+
+	sp = strstr (entry_text, " (");
+	if (sp) {
+		*first = g_strndup (entry_text, sp - entry_text);
+		left = sp + 1;
+		right = strchr (left, ')');
+		if (*left == '(' && right && right > left)
+			*second = g_strndup (left + 1, right - left - 1);
+		else {
+			*second = NULL;
+			return FALSE;
+		}
+	} else {
+		*first = g_strdup (entry_text);
+		*second = NULL;
+	}
+	return TRUE;
+}
+
+static gboolean
+_device_entries_match (const char *ifname, const char *mac, const char *entry)
+{
+	char *first, *second;
+	gboolean ifname_match = FALSE, mac_match = FALSE;
+	gboolean both;
+
+	if (!ifname && !mac)
+		return FALSE;
+
+	_device_entry_parse (entry, &first, &second);
+	both = first && second;
+
+	if (   ifname
+	    && (   !g_strcmp0 (ifname, first)
+	        || !g_strcmp0 (ifname, second)))
+		ifname_match = TRUE;
+
+	if (   mac
+	    && (   (first && nm_utils_hwaddr_matches (mac, -1, first, -1))
+	        || (second && nm_utils_hwaddr_matches (mac, -1, second, -1))))
+		mac_match = TRUE;
+
+	g_free (first);
+	g_free (second);
+
+	if (both)
+		return ifname_match && mac_match;
+	else {
+		if (ifname)
+			return ifname_match;
+		else
+			return mac_match;
 	}
 }
 
+/* Combo box storing ifname and/or MAC */
 void
-ce_page_mac_to_entry (const GByteArray *mac, int type, GtkEntry *entry)
+ce_page_setup_device_combo (CEPage *self,
+                            GtkComboBox *combo,
+                            GType device_type,
+                            const char *ifname,
+                            const char *mac,
+                            const char *mac_property,
+                            gboolean ifname_first)
 {
-	char *str_addr;
+	char **iter, *active_item = NULL;
+	int i, active_idx = -1;
+	char **device_list;
+	char *item;
 
-	g_return_if_fail (entry != NULL);
-	g_return_if_fail (GTK_IS_ENTRY (entry));
+	device_list = _get_device_list (self, device_type, TRUE, mac_property, ifname_first);
 
-	if (!mac || !mac->len)
-		return;
+	if (ifname && mac)
+		item = g_strdup_printf ("%s (%s)", ifname, mac);
+	else if (!ifname && !mac)
+		item = NULL;
+	else
+		item = g_strdup (ifname ? ifname : mac);
 
-	if (mac->len != nm_utils_hwaddr_len (type))
-		return;
+	for (iter = device_list, i = 0; iter && *iter; iter++, i++) {
+		gtk_combo_box_text_append_text (GTK_COMBO_BOX_TEXT (combo), *iter);
+		if (_device_entries_match (ifname, mac, *iter)) {
+			active_item = *iter;
+			active_idx = i;
+		}
+	}
+	_set_active_combo_item (combo, item, active_item, active_idx);
 
-	str_addr = nm_utils_hwaddr_ntoa (mac->data, type);
-	gtk_entry_set_text (entry, str_addr);
-	g_free (str_addr);
+	g_free (item);
+	g_strfreev (device_list);
 }
 
-GByteArray *
-ce_page_entry_to_mac (GtkEntry *entry, int type, gboolean *invalid)
+gboolean
+ce_page_device_entry_get (GtkEntry *entry, int type, gboolean check_ifname,
+                          char **ifname, char **mac, const char *device_name, GError **error)
 {
-	const char *temp, *sp;
-	char *buf = NULL;
-	GByteArray *mac;
+	char *first, *second;
+	const char *ifname_tmp = NULL, *mac_tmp = NULL;
+	gboolean valid = TRUE;
+	const char *str;
 
-	g_return_val_if_fail (entry != NULL, NULL);
-	g_return_val_if_fail (GTK_IS_ENTRY (entry), NULL);
+	g_return_val_if_fail (entry != NULL, FALSE);
+	g_return_val_if_fail (GTK_IS_ENTRY (entry), FALSE);
 
-	if (invalid)
-		g_return_val_if_fail (*invalid == FALSE, NULL);
+	str = gtk_entry_get_text (entry);
 
-	temp = gtk_entry_get_text (entry);
-	if (!temp || !strlen (temp))
-		return NULL;
+	valid = _device_entry_parse (str, &first, &second);
 
-	sp = strchr (temp, ' ');
-	if (sp)
-		temp = buf = g_strndup (temp, sp - temp);
-
-	mac = nm_utils_hwaddr_atoba (temp, type);
-	g_free (buf);
-	if (!mac) {
-		if (invalid)
-			*invalid = TRUE;
-		return NULL;
+	if (first) {
+		if (nm_utils_hwaddr_valid (first, nm_utils_hwaddr_len (type)))
+			mac_tmp = first;
+		else if (!check_ifname || nm_utils_iface_valid_name (first))
+			ifname_tmp = first;
+		else
+			valid = FALSE;
+	}
+	if (second) {
+		if (nm_utils_hwaddr_valid (second, nm_utils_hwaddr_len (type))) {
+			if (!mac_tmp)
+				mac_tmp = second;
+			else
+				valid = FALSE;
+		} else if (!check_ifname || nm_utils_iface_valid_name (second)) {
+			if (!ifname_tmp)
+				ifname_tmp = second;
+			else
+				valid = FALSE;
+		} else
+			valid = FALSE;
 	}
 
-	if (type == ARPHRD_ETHER && !utils_ether_addr_valid ((struct ether_addr *)mac->data)) {
-		g_byte_array_free (mac, TRUE);
-		if (invalid)
-			*invalid = TRUE;
-		return NULL;
+	if (ifname)
+		*ifname = g_strdup (ifname_tmp);
+	if (mac)
+		*mac = g_strdup (mac_tmp);
+
+	g_free (first);
+	g_free (second);
+
+	if (!valid) {
+		g_set_error (error, NMA_ERROR, NMA_ERROR_GENERIC,
+		             _("invalid %s (%s)"),
+		             device_name ? device_name : _("device"),
+		             str);
 	}
 
-	return mac;
+	return valid;
 }
 
 char *
-ce_page_get_next_available_name (GSList *connections, const char *format)
+ce_page_get_next_available_name (const GPtrArray *connections, const char *format)
 {
 	GSList *names = NULL, *iter;
 	char *cname = NULL;
 	int i = 0;
 
-	for (iter = connections; iter; iter = g_slist_next (iter)) {
+	for (i = 0; i < connections->len; i++) {
 		const char *id;
 
-		id = nm_connection_get_id (NM_CONNECTION (iter->data));
+		id = nm_connection_get_id (connections->pdata[i]);
 		g_assert (id);
 		names = g_slist_append (names, (gpointer) id);
 	}
 
 	/* Find the next available unique connection name */
-	while (!cname && (i++ < 10000)) {
+	for (i = 1; !cname && i < 10000; i++) {
 		char *temp;
 		gboolean found = FALSE;
 
+		NM_PRAGMA_WARNING_DISABLE("-Wformat-nonliteral")
 		temp = g_strdup_printf (format, i);
+		NM_PRAGMA_WARNING_REENABLE
 		for (iter = names; iter; iter = g_slist_next (iter)) {
 			if (!strcmp (iter->data, temp)) {
 				found = TRUE;
@@ -313,22 +595,30 @@ emit_initialized (CEPage *self, GError *error)
 void
 ce_page_complete_init (CEPage *self,
                        const char *setting_name,
-                       GHashTable *secrets,
+                       GVariant *secrets,
                        GError *error)
 {
 	GError *update_error = NULL;
-	GHashTable *setting_hash;
+	GVariant *setting_dict;
+	char *dbus_err;
+	gboolean ignore_error = FALSE;
 
 	g_return_if_fail (self != NULL);
 	g_return_if_fail (CE_IS_PAGE (self));
 
+	if (error) {
+		dbus_err = g_dbus_error_get_remote_error (error);
+		ignore_error =    !g_strcmp0 (dbus_err, "org.freedesktop.NetworkManager.Settings.InvalidSetting")
+		               || !g_strcmp0 (dbus_err, "org.freedesktop.NetworkManager.Settings.Connection.SettingNotFound")
+		               || !g_strcmp0 (dbus_err, "org.freedesktop.NetworkManager.AgentManager.NoSecrets");
+		g_free (dbus_err);
+	}
+
 	/* Ignore missing settings errors */
-	if (   error
-	    && !dbus_g_error_has_name (error, "org.freedesktop.NetworkManager.Settings.InvalidSetting")
-	    && !dbus_g_error_has_name (error, "org.freedesktop.NetworkManager.AgentManager.NoSecrets")) {
+	if (error && !ignore_error) {
 		emit_initialized (self, error);
 		return;
-	} else if (!setting_name || !secrets || !g_hash_table_size (secrets)) {
+	} else if (!setting_name || !secrets || g_variant_n_children (secrets) == 0) {
 		/* Success, no secrets */
 		emit_initialized (self, NULL);
 		return;
@@ -337,12 +627,13 @@ ce_page_complete_init (CEPage *self,
 	g_assert (setting_name);
 	g_assert (secrets);
 
-	setting_hash = g_hash_table_lookup (secrets, setting_name);
-	if (!setting_hash) {
+	setting_dict = g_variant_lookup_value (secrets, setting_name, NM_VARIANT_TYPE_SETTING);
+	if (!setting_dict) {
 		/* Success, no secrets */
 		emit_initialized (self, NULL);
 		return;
 	}
+	g_variant_unref (setting_dict);
 
 	/* Update the connection with the new secrets */
 	if (nm_connection_update_secrets (self->connection,
@@ -374,22 +665,9 @@ dispose (GObject *object)
 {
 	CEPage *self = CE_PAGE (object);
 
-	if (self->disposed)
-		return;
-
-	self->disposed = TRUE;
-
-	if (self->page)
-		g_object_unref (self->page);
-
-	if (self->builder)
-		g_object_unref (self->builder);
-
-	if (self->proxy)
-		g_object_unref (self->proxy);
-
-	if (self->connection)
-		g_object_unref (self->connection);
+	g_clear_object (&self->page);
+	g_clear_object (&self->builder);
+	g_clear_object (&self->connection);
 
 	G_OBJECT_CLASS (ce_page_parent_class)->dispose (object);
 }
@@ -517,8 +795,7 @@ ce_page_class_init (CEPageClass *page_class)
 	                      G_OBJECT_CLASS_TYPE (object_class),
 	                      G_SIGNAL_RUN_FIRST,
 	                      G_STRUCT_OFFSET (CEPageClass, changed),
-	                      NULL, NULL,
-	                      g_cclosure_marshal_VOID__VOID,
+	                      NULL, NULL, NULL,
 	                      G_TYPE_NONE, 0);
 
 	signals[INITIALIZED] = 
@@ -526,8 +803,7 @@ ce_page_class_init (CEPageClass *page_class)
 	                      G_OBJECT_CLASS_TYPE (object_class),
 	                      G_SIGNAL_RUN_FIRST,
 	                      G_STRUCT_OFFSET (CEPageClass, initialized),
-	                      NULL, NULL,
-	                      g_cclosure_marshal_VOID__POINTER,
+	                      NULL, NULL, NULL,
 	                      G_TYPE_NONE, 1, G_TYPE_POINTER);
 }
 
@@ -536,24 +812,23 @@ NMConnection *
 ce_page_new_connection (const char *format,
                         const char *ctype,
                         gboolean autoconnect,
-                        NMRemoteSettings *settings,
+                        NMClient *client,
                         gpointer user_data)
 {
 	NMConnection *connection;
 	NMSettingConnection *s_con;
 	char *uuid, *id;
-	GSList *connections;
+	const GPtrArray *connections;
 
-	connection = nm_connection_new ();
+	connection = nm_simple_connection_new ();
 
 	s_con = NM_SETTING_CONNECTION (nm_setting_connection_new ());
 	nm_connection_add_setting (connection, NM_SETTING (s_con));
 
 	uuid = nm_utils_uuid_generate ();
 
-	connections = nm_remote_settings_list_connections (settings);
+	connections = nm_client_get_connections (client);
 	id = ce_page_get_next_available_name (connections, format);
-	g_slist_free (connections);
 
 	g_object_set (s_con,
 	              NM_SETTING_CONNECTION_UUID, uuid,
@@ -570,10 +845,10 @@ ce_page_new_connection (const char *format,
 
 CEPage *
 ce_page_new (GType page_type,
+             NMConnectionEditor *editor,
              NMConnection *connection,
              GtkWindow *parent_window,
              NMClient *client,
-             NMRemoteSettings *settings,
              const char *ui_file,
              const char *widget_name,
              const char *title)
@@ -591,7 +866,7 @@ ce_page_new (GType page_type,
 	                              NULL));
 	self->title = g_strdup (title);
 	self->client = client;
-	self->settings = settings;
+	self->editor = editor;
 
 	if (ui_file) {
 		if (!gtk_builder_add_from_file (self->builder, ui_file, &error)) {
