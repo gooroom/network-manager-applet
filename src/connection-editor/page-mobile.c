@@ -17,26 +17,16 @@
  * with this program; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
- * (C) Copyright 2008 - 2011 Red Hat, Inc.
+ * Copyright 2008 - 2014 Red Hat, Inc.
  */
 
-#include "config.h"
+#include "nm-default.h"
 
 #include <string.h>
 
-#include <gtk/gtk.h>
-#include <glib/gi18n.h>
-
-#include <nm-glib-compat.h>
-#include <nm-setting-connection.h>
-#include <nm-setting-gsm.h>
-#include <nm-setting-cdma.h>
-#include <nm-setting-serial.h>
-#include <nm-setting-ppp.h>
-
 #include "page-mobile.h"
 #include "nm-connection-editor.h"
-#include "nm-mobile-wizard.h"
+#include "nma-mobile-wizard.h"
 
 G_DEFINE_TYPE (CEPageMobile, ce_page_mobile, CE_TYPE_PAGE)
 
@@ -54,14 +44,11 @@ typedef struct {
 	GtkEntry *apn;
 	GtkButton *apn_button;
 	GtkEntry *network_id;
-	GtkComboBox *network_type;
 	GtkToggleButton *roaming_allowed;
 	GtkEntry *pin;
 
 	GtkWindowGroup *window_group;
 	gboolean window_added;
-
-	gboolean disposed;
 } CEPageMobilePrivate;
 
 #define NET_TYPE_ANY         0
@@ -87,7 +74,6 @@ mobile_private_init (CEPageMobile *self)
 	priv->apn = GTK_ENTRY (gtk_builder_get_object (builder, "mobile_apn"));
 	priv->apn_button = GTK_BUTTON (gtk_builder_get_object (builder, "mobile_apn_button"));
 	priv->network_id = GTK_ENTRY (gtk_builder_get_object (builder, "mobile_network_id"));
-	priv->network_type = GTK_COMBO_BOX (gtk_builder_get_object (builder, "mobile_network_type"));
 	priv->roaming_allowed = GTK_TOGGLE_BUTTON (gtk_builder_get_object (builder, "mobile_roaming_allowed"));
 
 	priv->pin = GTK_ENTRY (gtk_builder_get_object (builder, "mobile_pin"));
@@ -100,7 +86,6 @@ populate_gsm_ui (CEPageMobile *self, NMConnection *connection)
 {
 	CEPageMobilePrivate *priv = CE_PAGE_MOBILE_GET_PRIVATE (self);
 	NMSettingGsm *setting = NM_SETTING_GSM (priv->setting);
-	int type_idx;
 	const char *s;
 
 	s = nm_setting_gsm_get_number (setting);
@@ -118,34 +103,6 @@ populate_gsm_ui (CEPageMobile *self, NMConnection *connection)
 	s = nm_setting_gsm_get_network_id (setting);
 	if (s)
 		gtk_entry_set_text (priv->network_id, s);
-
-G_GNUC_BEGIN_IGNORE_DEPRECATIONS
-	switch (nm_setting_gsm_get_network_type (setting)) {
-	case NM_SETTING_GSM_NETWORK_TYPE_UMTS_HSPA:
-		type_idx = NET_TYPE_3G;
-		break;
-	case NM_SETTING_GSM_NETWORK_TYPE_GPRS_EDGE:
-		type_idx = NET_TYPE_2G;
-		break;
-	case NM_SETTING_GSM_NETWORK_TYPE_PREFER_UMTS_HSPA:
-		type_idx = NET_TYPE_PREFER_3G;
-		break;
-	case NM_SETTING_GSM_NETWORK_TYPE_PREFER_GPRS_EDGE:
-		type_idx = NET_TYPE_PREFER_2G;
-		break;
-	case NM_SETTING_GSM_NETWORK_TYPE_PREFER_4G:
-		type_idx = NET_TYPE_PREFER_4G;
-		break;
-	case NM_SETTING_GSM_NETWORK_TYPE_4G:
-		type_idx = NET_TYPE_4G;
-		break;
-	case NM_SETTING_GSM_NETWORK_TYPE_ANY:
-	default:
-		type_idx = NET_TYPE_ANY;
-		break;
-	}
-	gtk_combo_box_set_active (priv->network_type, type_idx);
-G_GNUC_END_IGNORE_DEPRECATIONS
 
 	gtk_toggle_button_set_active (priv->roaming_allowed,
 	                              !nm_setting_gsm_get_home_only (setting));
@@ -321,7 +278,6 @@ finish_setup (CEPageMobile *self, gpointer unused, GError *error, gpointer user_
 	gtk_entry_set_max_length (priv->network_id, 6);  /* MCC/MNCs are max 6 chars */
 	g_signal_connect (priv->network_id, "insert-text", G_CALLBACK (network_id_filter_cb), self);
 
-	g_signal_connect (priv->network_type, "changed", G_CALLBACK (stuff_changed), self);
 	g_signal_connect (priv->pin, "changed", G_CALLBACK (stuff_changed), self);
 	g_signal_connect (priv->roaming_allowed, "toggled", G_CALLBACK (stuff_changed), self);
 
@@ -332,10 +288,10 @@ finish_setup (CEPageMobile *self, gpointer unused, GError *error, gpointer user_
 }
 
 CEPage *
-ce_page_mobile_new (NMConnection *connection,
+ce_page_mobile_new (NMConnectionEditor *editor,
+                    NMConnection *connection,
                     GtkWindow *parent_window,
                     NMClient *client,
-                    NMRemoteSettings *settings,
                     const char **out_secrets_setting_name,
                     GError **error)
 {
@@ -343,10 +299,10 @@ ce_page_mobile_new (NMConnection *connection,
 	CEPageMobilePrivate *priv;
 
 	self = CE_PAGE_MOBILE (ce_page_new (CE_TYPE_PAGE_MOBILE,
+	                                    editor,
 	                                    connection,
 	                                    parent_window,
 	                                    client,
-	                                    settings,
 	                                    UIDIR "/ce-page-mobile.ui",
 	                                    "MobilePage",
 	                                    _("Mobile Broadband")));
@@ -394,33 +350,7 @@ static void
 gsm_ui_to_setting (CEPageMobile *self)
 {
 	CEPageMobilePrivate *priv = CE_PAGE_MOBILE_GET_PRIVATE (self);
-	int net_type;
 	gboolean roaming_allowed;
-
-	switch (gtk_combo_box_get_active (priv->network_type)) {
-	case NET_TYPE_3G:
-		net_type = NM_SETTING_GSM_NETWORK_TYPE_UMTS_HSPA;
-		break;
-	case NET_TYPE_2G:
-		net_type = NM_SETTING_GSM_NETWORK_TYPE_GPRS_EDGE;
-		break;
-	case NET_TYPE_PREFER_3G:
-		net_type = NM_SETTING_GSM_NETWORK_TYPE_PREFER_UMTS_HSPA;
-		break;
-	case NET_TYPE_PREFER_2G:
-		net_type = NM_SETTING_GSM_NETWORK_TYPE_PREFER_GPRS_EDGE;
-		break;
-	case NET_TYPE_PREFER_4G:
-		net_type = NM_SETTING_GSM_NETWORK_TYPE_PREFER_4G;
-		break;
-	case NET_TYPE_4G:
-		net_type = NM_SETTING_GSM_NETWORK_TYPE_4G;
-		break;
-	case NET_TYPE_ANY:
-	default:
-		net_type = NM_SETTING_GSM_NETWORK_TYPE_ANY;
-		break;
-	}
 
 	roaming_allowed = gtk_toggle_button_get_active (priv->roaming_allowed);
 
@@ -430,7 +360,6 @@ gsm_ui_to_setting (CEPageMobile *self)
 	              NM_SETTING_GSM_PASSWORD,     nm_entry_get_text (priv->password),
 	              NM_SETTING_GSM_APN,          nm_entry_get_text (priv->apn),
 	              NM_SETTING_GSM_NETWORK_ID,   nm_entry_get_text (priv->network_id),
-	              NM_SETTING_GSM_NETWORK_TYPE, net_type,
 	              NM_SETTING_GSM_PIN,          nm_entry_get_text (priv->pin),
 	              NM_SETTING_GSM_HOME_ONLY,    !roaming_allowed,
 	              NULL);
@@ -462,7 +391,7 @@ ui_to_setting (CEPageMobile *self)
 }
 
 static gboolean
-validate (CEPage *page, NMConnection *connection, GError **error)
+ce_page_validate_v (CEPage *page, NMConnection *connection, GError **error)
 {
 	CEPageMobile *self = CE_PAGE_MOBILE (page);
 	CEPageMobilePrivate *priv = CE_PAGE_MOBILE_GET_PRIVATE (self);
@@ -474,11 +403,7 @@ validate (CEPage *page, NMConnection *connection, GError **error)
 static void
 dispose (GObject *object)
 {
-	CEPageMobile *self = CE_PAGE_MOBILE (object);
-	CEPageMobilePrivate *priv = CE_PAGE_MOBILE_GET_PRIVATE (self);
-
-	if (priv->window_group)
-		g_object_unref (priv->window_group);
+	g_clear_object (&CE_PAGE_MOBILE_GET_PRIVATE (object)->window_group);
 
 	G_OBJECT_CLASS (ce_page_mobile_parent_class)->dispose (object);
 }
@@ -497,28 +422,12 @@ ce_page_mobile_class_init (CEPageMobileClass *mobile_class)
 	g_type_class_add_private (object_class, sizeof (CEPageMobilePrivate));
 
 	/* virtual methods */
-	parent_class->validate = validate;
+	parent_class->ce_page_validate_v = ce_page_validate_v;
 	object_class->dispose = dispose;
 }
 
-static void
-add_default_serial_setting (NMConnection *connection)
-{
-	NMSettingSerial *s_serial;
-
-	s_serial = NM_SETTING_SERIAL (nm_setting_serial_new ());
-	g_object_set (s_serial,
-	              NM_SETTING_SERIAL_BAUD, 115200,
-	              NM_SETTING_SERIAL_BITS, 8,
-	              NM_SETTING_SERIAL_PARITY, 'n',
-	              NM_SETTING_SERIAL_STOPBITS, 1,
-	              NULL);
-
-	nm_connection_add_setting (connection, NM_SETTING (s_serial));
-}
-
 typedef struct {
-    NMRemoteSettings *settings;
+    NMClient *client;
     PageNewConnectionResultFunc result_func;
     gpointer user_data;
 } WizardInfo;
@@ -568,11 +477,10 @@ new_connection_mobile_wizard_done (NMAMobileWizard *wizard,
 			detail = g_strdup_printf ("%s %s %%d", method->provider_name, method->plan_name);
 		else
 			detail = g_strdup_printf ("%s connection %%d", method->provider_name);
-		connection = ce_page_new_connection (detail, ctype, FALSE, info->settings, info->user_data);
+		connection = ce_page_new_connection (detail, ctype, FALSE, info->client, info->user_data);
 		g_free (detail);
 
 		nm_connection_add_setting (connection, type_setting);
-		add_default_serial_setting (connection);
 		nm_connection_add_setting (connection, nm_setting_ppp_new ());
 	}
 
@@ -581,7 +489,7 @@ new_connection_mobile_wizard_done (NMAMobileWizard *wizard,
 	if (wizard)
 		nma_mobile_wizard_destroy (wizard);
 
-	g_object_unref (info->settings);
+	g_object_unref (info->client);
 	g_free (info);
 }
 
@@ -594,7 +502,8 @@ cancel_dialog (GtkDialog *dialog)
 void
 mobile_connection_new (GtkWindow *parent,
                        const char *detail,
-                       NMRemoteSettings *settings,
+                       gpointer detail_data,
+                       NMClient *client,
                        PageNewConnectionResultFunc result_func,
                        gpointer user_data)
 {
@@ -607,11 +516,11 @@ mobile_connection_new (GtkWindow *parent,
 
 	info = g_malloc0 (sizeof (WizardInfo));
 	info->result_func = result_func;
-	info->settings = g_object_ref (settings);
+	info->client = g_object_ref (client);
 	info->user_data = user_data;
 
 	wizard = nma_mobile_wizard_new (parent, NULL, NM_DEVICE_MODEM_CAPABILITY_NONE, FALSE,
-									new_connection_mobile_wizard_done, info);
+	                                new_connection_mobile_wizard_done, info);
 	if (wizard) {
 		nma_mobile_wizard_present (wizard);
 		return;

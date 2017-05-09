@@ -17,18 +17,13 @@
  * with this program; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
- * (C) Copyright 2007 - 2011 Red Hat, Inc.
+ * Copyright 2007 - 2015 Red Hat, Inc.
  */
 
-#include <config.h>
+#include "nm-default.h"
+
 #include <string.h>
 #include <netinet/ether.h>
-#include <glib.h>
-#include <glib/gi18n.h>
-#include <gtk/gtk.h>
-
-#include <nm-setting-connection.h>
-#include <nm-utils.h>
 
 #include "utils.h"
 
@@ -63,12 +58,17 @@ utils_ether_addr_valid (const struct ether_addr *test_addr)
 
 	if (test_addr->ether_addr_octet[0] & 1)			/* Multicast addresses */
 		return FALSE;
-	
+
 	return TRUE;
 }
 
 char *
-utils_hash_ap (const GByteArray *ssid,
+utils_hash_ap (
+#ifdef LIBNM_BUILD
+               GBytes *ssid,
+#else
+               const GByteArray *ssid,
+#endif
                NM80211Mode mode,
                guint32 flags,
                guint32 wpa_flags,
@@ -78,8 +78,13 @@ utils_hash_ap (const GByteArray *ssid,
 
 	memset (&input[0], 0, sizeof (input));
 
-	if (ssid)
+	if (ssid) {
+#ifdef LIBNM_BUILD
+		memcpy (input, g_bytes_get_data (ssid, NULL), g_bytes_get_size (ssid));
+#else
 		memcpy (input, ssid->data, ssid->len);
+#endif
+	}
 
 	if (mode == NM_802_11_MODE_INFRA)
 		input[32] |= (1 << 0);
@@ -286,187 +291,97 @@ utils_filter_editable_on_insert_text (GtkEditable *editable,
 	return count > 0;
 }
 
-static void
-change_password_storage_icon (GtkWidget *passwd_entry, int number)
-{
-	char *icon_name = "document-save";
-
-	if (number == 1)
-		icon_name = "document-save";
-	else if (number == 2)
-		icon_name = "document-save-as";
-
-	gtk_entry_set_icon_from_icon_name (GTK_ENTRY (passwd_entry), GTK_ENTRY_ICON_SECONDARY, icon_name);
-}
-
-typedef struct {
-	NMConnection *connection;
-	const char *setting_name;
-	const char *password_flags_name;
-	int item_number;
-	GtkWidget *passwd_entry;
-} PopupMenuItemInfo;
-
-static void
-popup_menu_item_info_destroy (gpointer data)
-{
-	g_slice_free (PopupMenuItemInfo, data);
-}
-
-static void
-activate_menu_item_cb (GtkMenuItem *menuitem, gpointer user_data)
-{
-	PopupMenuItemInfo *info = (PopupMenuItemInfo *) user_data;
-	NMSetting *setting;
-	NMSettingSecretFlags secret_flags = NM_SETTING_SECRET_FLAG_NONE;
-
-	/* Get current secret flags */
-	setting = nm_connection_get_setting_by_name (info->connection, info->setting_name);
-	if (setting)
-		nm_setting_get_secret_flags (setting, info->password_flags_name, &secret_flags, NULL);
-
-	/* Update password flags according to the password-storage popup menu */
-	if (gtk_check_menu_item_get_active (GTK_CHECK_MENU_ITEM (menuitem))) {
-		if (info->item_number == 1)
-			secret_flags |= NM_SETTING_SECRET_FLAG_AGENT_OWNED;
-		else
-			secret_flags &= ~NM_SETTING_SECRET_FLAG_AGENT_OWNED;
-
-		/* Update the secret flags */
-		if (setting)
-			nm_setting_set_secret_flags (setting, info->password_flags_name, secret_flags, NULL);
-
-		/* Change icon */
-		change_password_storage_icon (info->passwd_entry, info->item_number);
-	}
-}
-
-static void
-icon_release_cb (GtkEntry *entry,
-                 GtkEntryIconPosition position,
-                 GdkEventButton *event,
-                 gpointer data)
-{
-	GtkMenu *menu = GTK_MENU (data);
-	if (position == GTK_ENTRY_ICON_SECONDARY) {
-		gtk_widget_show_all (GTK_WIDGET (data));
-		gtk_menu_popup (menu, NULL, NULL, NULL, NULL,
-		                event->button, event->time);
-	}
-}
-
-#define PASSWORD_STORAGE_MENU_TAG "password-storage-menu"
-
 /**
- * Add secondary icon and create popup menu for password entry.
- **/
+ * utils_override_bg_color:
+ *
+ * The function can be used to set background color for a widget.
+ * There are functions for that in Gtk2 [1] and Gtk3 [2]. Unfortunately, they
+ * have been deprecated, and moreover gtk_widget_override_background_color()
+ * stopped working at some point for some Gtk themes, including the default
+ * Adwaita theme.
+ * [1] gtk_widget_modify_bg() or gtk_widget_modify_base()
+ * [2] gtk_widget_override_background_color()
+ *
+ * Related links:
+ * https://bugzilla.gnome.org/show_bug.cgi?id=656461
+ * https://mail.gnome.org/archives/gtk-list/2015-February/msg00053.html
+ */
 void
-utils_setup_password_storage (NMConnection *connection,
-                              const char *setting_name,
-                              GtkWidget *passwd_entry,
-                              const char *password_flags_name)
+utils_override_bg_color (GtkWidget *widget, GdkRGBA *rgba)
 {
-	GtkWidget *popup_menu;
-	GtkWidget *item1, *item2;
-	GSList *group;
-	PopupMenuItemInfo *info;
-	NMSetting *setting;
+	GtkCssProvider *provider;
+	char *css;
 
-	gtk_entry_set_icon_from_icon_name (GTK_ENTRY (passwd_entry), GTK_ENTRY_ICON_SECONDARY, "document-save");
-	popup_menu = gtk_menu_new ();
-	g_object_set_data (G_OBJECT (popup_menu), PASSWORD_STORAGE_MENU_TAG, GUINT_TO_POINTER (TRUE));
-	group = NULL;
-	item1 = gtk_radio_menu_item_new_with_mnemonic (group, _("Store the password only for this _user"));
-	group = gtk_radio_menu_item_get_group (GTK_RADIO_MENU_ITEM (item1));
-	item2 = gtk_radio_menu_item_new_with_mnemonic (group, _("Store the password for _all users"));
-
-	gtk_menu_shell_append (GTK_MENU_SHELL (popup_menu), item1);
-	gtk_menu_shell_append (GTK_MENU_SHELL (popup_menu), item2);
-
-	info = g_slice_new0 (PopupMenuItemInfo);
-	info->connection = connection;
-	info->setting_name = setting_name;
-	info->password_flags_name = password_flags_name;
-	info->item_number = 1;
-	info->passwd_entry = passwd_entry;
-	g_signal_connect_data (item1, "activate",
-	                       G_CALLBACK (activate_menu_item_cb),
-	                       info,
-	                       (GClosureNotify) popup_menu_item_info_destroy, 0);
-
-	info = g_slice_new0 (PopupMenuItemInfo);
-	info->connection = connection;
-	info->setting_name = setting_name;
-	info->password_flags_name = password_flags_name;
-	info->item_number = 2;
-	info->passwd_entry = passwd_entry;
-	g_signal_connect_data (item2, "activate",
-	                       G_CALLBACK (activate_menu_item_cb),
-	                       info,
-	                       (GClosureNotify) popup_menu_item_info_destroy, 0);
-
-	g_signal_connect (passwd_entry, "icon-release", G_CALLBACK (icon_release_cb), popup_menu);
-	gtk_menu_attach_to_widget (GTK_MENU (popup_menu), passwd_entry, NULL);
-
-	/* Initialize active item for password-storage popup menu */
-	setting = nm_connection_get_setting_by_name (connection, setting_name);
-	if (setting) {
-		NMSettingSecretFlags secret_flags = NM_SETTING_SECRET_FLAG_NONE;
-		nm_setting_get_secret_flags (setting, password_flags_name, &secret_flags, NULL);
-
-		if (secret_flags & NM_SETTING_SECRET_FLAG_AGENT_OWNED)
-			gtk_check_menu_item_set_active (GTK_CHECK_MENU_ITEM (item1), TRUE);
-		else {
-			gtk_check_menu_item_set_active (GTK_CHECK_MENU_ITEM (item2), TRUE);
-			/* Use different icon for system-storage */
-			change_password_storage_icon (passwd_entry, 2);
-		}
-	} else {
-		gtk_check_menu_item_set_active (GTK_CHECK_MENU_ITEM (item1), TRUE);
+	provider = (GtkCssProvider *) g_object_get_data (G_OBJECT (widget), "our-css-provider");
+	if (G_UNLIKELY (!provider)) {
+		provider = gtk_css_provider_new ();
+		gtk_style_context_add_provider (gtk_widget_get_style_context (widget),
+		                                GTK_STYLE_PROVIDER (provider),
+		                                GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
+		g_object_set_data_full (G_OBJECT (widget), "our-css-provider",
+		                        provider, (GDestroyNotify) g_object_unref);
 	}
+
+	if (rgba) {
+		css = g_strdup_printf ("* { background-color: %s; background-image: none; }",
+		                       gdk_rgba_to_string (rgba));
+		gtk_css_provider_load_from_data (provider, css, -1, NULL);
+		g_free (css);
+	} else
+		gtk_css_provider_load_from_data (provider, "", -1, NULL);
 }
 
-/**
- * Updates secret flags and the storage popup menu.
- **/
 void
-utils_update_password_storage (NMSetting *setting,
-                               NMSettingSecretFlags secret_flags,
-                               GtkWidget *passwd_entry,
-                               const char *password_flags_name)
+utils_set_cell_background (GtkCellRenderer *cell,
+                           const char *color,
+                           const char *value)
 {
-	GList *menu_list, *iter;
-	GtkWidget *menu = NULL;
-
-	/* Update secret flags (WEP_KEY_FLAGS, PSK_FLAGS, ...) in the security setting */
-	nm_setting_set_secret_flags (setting, password_flags_name, secret_flags, NULL);
-
-	menu_list = gtk_menu_get_for_attach_widget (passwd_entry);
-	for (iter = menu_list; iter; iter = g_list_next (iter)) {
-		if (g_object_get_data (G_OBJECT (iter->data), PASSWORD_STORAGE_MENU_TAG)) {
-			menu = iter->data;
-			break;
-		}
-	}
-
-	/* Update password-storage popup menu to reflect secret flags */
-	if (menu) {
-		GtkRadioMenuItem *item, *item_user, *item_system;
-		GSList *group;
-
-		/* radio menu group list contains the menu items in reverse order */
-		item = (GtkRadioMenuItem *) gtk_menu_get_active (GTK_MENU (menu));
-		group = gtk_radio_menu_item_get_group (item);
-		item_system = group->data;
-		item_user = group->next->data;
-
-		if (secret_flags & NM_SETTING_SECRET_FLAG_AGENT_OWNED) {
-			gtk_check_menu_item_set_active (GTK_CHECK_MENU_ITEM (item_user), TRUE);
-			change_password_storage_icon (passwd_entry, 1);
+	if (color) {
+		if (!value || !*value) {
+			g_object_set (G_OBJECT (cell),
+			              "cell-background-set", TRUE,
+			              "cell-background", color,
+			              NULL);
 		} else {
-			gtk_check_menu_item_set_active (GTK_CHECK_MENU_ITEM (item_system), TRUE);
-			change_password_storage_icon (passwd_entry, 2);
+			char *markup;
+			markup = g_markup_printf_escaped ("<span background='%s'>%s</span>",
+			                                  color, value);
+			g_object_set (G_OBJECT (cell), "markup", markup, NULL);
+			g_free (markup);
+			g_object_set (G_OBJECT (cell), "cell-background-set", FALSE, NULL);
 		}
-	}
+	} else
+		g_object_set (G_OBJECT (cell), "cell-background-set", FALSE, NULL);
 }
 
+/* Change key in @event to 'Enter' key. */
+void
+utils_fake_return_key (GdkEventKey *event)
+{
+	GdkKeymapKey *keys = NULL;
+	gint n_keys;
+
+	/* Get hardware keycode for GDK_KEY_Return */
+	if (gdk_keymap_get_entries_for_keyval (gdk_keymap_get_default (), GDK_KEY_Return, &keys, &n_keys)) {
+		event->keyval = GDK_KEY_Return;
+		event->hardware_keycode = keys[0].keycode;
+		event->state = 0;
+	}
+	g_free (keys);
+}
+
+void
+widget_set_error (GtkWidget *widget)
+{
+	g_return_if_fail (GTK_IS_WIDGET (widget));
+
+	gtk_style_context_add_class (gtk_widget_get_style_context (widget), "error");
+}
+
+void
+widget_unset_error (GtkWidget *widget)
+{
+	g_return_if_fail (GTK_IS_WIDGET (widget));
+
+	gtk_style_context_remove_class (gtk_widget_get_style_context (widget), "error");
+}
