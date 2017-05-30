@@ -22,13 +22,11 @@
  * Copyright (C) 2012 Lanedo GmbH
  */
 
-#include "config.h"
+#include "nm-default.h"
 
 #include <string.h>
 #include <errno.h>
 #include <stdlib.h>
-
-#include <glib/gi18n-lib.h>
 
 #include "nm-mobile-providers.h"
 
@@ -1136,7 +1134,7 @@ struct _NMAMobileProvidersDatabasePrivate {
  * @self: a #NMAMobileProvidersDatabase.
  *
  * Returns: (element-type utf8 NMGtk.CountryInfo) (transfer none): a
- *	 hash table where keys are country names #gchar and values are #NMACountryInfos.
+ *	 hash table where keys are country names #gchar and values are #NMACountryInfo.
  */
 GHashTable *
 nma_mobile_providers_database_get_countries (NMAMobileProvidersDatabase *self)

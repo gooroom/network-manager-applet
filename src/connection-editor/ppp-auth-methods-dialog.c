@@ -17,8 +17,10 @@
  * with this program; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
- * (C) Copyright 2008 - 2011 Red Hat, Inc.
+ * Copyright 2008 - 2014 Red Hat, Inc.
  */
+
+#include "nm-default.h"
 
 #include <netinet/in.h>
 #include <sys/types.h>
@@ -28,9 +30,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <glib/gi18n.h>
 
-#include <nm-utils.h>
+#include <NetworkManager.h>
 
 #include "ppp-auth-methods-dialog.h"
 
@@ -85,8 +86,8 @@ ppp_auth_methods_dialog_new (gboolean refuse_eap,
 
 	builder = gtk_builder_new ();
 
-	if (!gtk_builder_add_from_file (builder, UIDIR "/ce-ppp-auth-methods.ui", &error)) {
-		g_warning ("Couldn't load builder file: %s", error->message);
+	if (!gtk_builder_add_from_resource (builder, "/org/freedesktop/network-manager-applet/ce-ppp-auth-methods.ui", &error)) {
+		g_warning ("Couldn't load builder resource: %s", error->message);
 		g_error_free (error);
 		return NULL;
 	}

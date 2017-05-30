@@ -18,24 +18,21 @@
  * with this program; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
- * (C) Copyright 2007 - 2012 Red Hat, Inc.
+ * Copyright 2007 - 2014 Red Hat, Inc.
  */
 
-#include "config.h"
+#include "nm-default.h"
 
-#include <glib.h>
-#include <glib/gi18n.h>
-#include <gtk/gtk.h>
 #include <string.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <unistd.h>
 
-#include <nm-setting-connection.h>
-#include <nm-setting-8021x.h>
 #include "eap-method.h"
 #include "nm-utils.h"
+#include "utils.h"
+#include "helpers.h"
 
 G_DEFINE_BOXED_TYPE (EAPMethod, eap_method, eap_method_ref, eap_method_unref)
 
@@ -48,12 +45,17 @@ eap_method_get_widget (EAPMethod *method)
 }
 
 gboolean
-eap_method_validate (EAPMethod *method)
+eap_method_validate (EAPMethod *method, GError **error)
 {
+	gboolean result;
+
 	g_return_val_if_fail (method != NULL, FALSE);
 
 	g_assert (method->validate);
-	return (*(method->validate)) (method);
+	result = (*(method->validate)) (method, error);
+	if (!result && error && !*error)
+		g_set_error_literal (error, NMA_ERROR, NMA_ERROR_GENERIC, _("undefined error in 802.1X security (wpa-eap)"));
+	return result;
 }
 
 void
@@ -127,7 +129,7 @@ eap_method_init (gsize obj_size,
                  EMFillConnectionFunc fill_connection,
                  EMUpdateSecretsFunc update_secrets,
                  EMDestroyFunc destroy,
-                 const char *ui_file,
+                 const char *ui_resource,
                  const char *ui_widget_name,
                  const char *default_field,
                  gboolean phase2)
@@ -136,7 +138,7 @@ eap_method_init (gsize obj_size,
 	GError *error = NULL;
 
 	g_return_val_if_fail (obj_size > 0, NULL);
-	g_return_val_if_fail (ui_file != NULL, NULL);
+	g_return_val_if_fail (ui_resource != NULL, NULL);
 	g_return_val_if_fail (ui_widget_name != NULL, NULL);
 
 	method = g_slice_alloc0 (obj_size);
@@ -152,9 +154,9 @@ eap_method_init (gsize obj_size,
 	method->phase2 = phase2;
 
 	method->builder = gtk_builder_new ();
-	if (!gtk_builder_add_from_file (method->builder, ui_file, &error)) {
-		g_warning ("Couldn't load UI builder file %s: %s",
-		           ui_file, error->message);
+	if (!gtk_builder_add_from_resource (method->builder, ui_resource, &error)) {
+		g_warning ("Couldn't load UI builder resource %s: %s",
+		           ui_resource, error->message);
 		eap_method_unref (method);
 		return NULL;
 	}
@@ -162,7 +164,7 @@ eap_method_init (gsize obj_size,
 	method->ui_widget = GTK_WIDGET (gtk_builder_get_object (method->builder, ui_widget_name));
 	if (!method->ui_widget) {
 		g_warning ("Couldn't load UI widget '%s' from UI file %s",
-		           ui_widget_name, ui_file);
+		           ui_widget_name, ui_resource);
 		eap_method_unref (method);
 		return NULL;
 	}
@@ -209,50 +211,46 @@ eap_method_validate_filepicker (GtkBuilder *builder,
                                 const char *name,
                                 guint32 item_type,
                                 const char *password,
-                                NMSetting8021xCKFormat *out_format)
+                                NMSetting8021xCKFormat *out_format,
+                                GError **error)
 {
 	GtkWidget *widget;
 	char *filename;
 	NMSetting8021x *setting;
-	gboolean success = FALSE;
-	GError *error = NULL;
+	gboolean success = TRUE;
 
 	if (item_type == TYPE_PRIVATE_KEY) {
-		g_return_val_if_fail (password != NULL, FALSE);
-		g_return_val_if_fail (strlen (password), FALSE);
+		if (!password || *password == '\0')
+			success = FALSE;
 	}
 
 	widget = GTK_WIDGET (gtk_builder_get_object (builder, name));
 	g_assert (widget);
 	filename = gtk_file_chooser_get_filename (GTK_FILE_CHOOSER (widget));
-	if (!filename)
-		return (item_type == TYPE_CA_CERT) ? TRUE : FALSE;
-
-	if (!g_file_test (filename, G_FILE_TEST_EXISTS | G_FILE_TEST_IS_REGULAR))
+	if (!filename) {
+		if (item_type != TYPE_CA_CERT) {
+			success = FALSE;
+			g_set_error_literal (error, NMA_ERROR, NMA_ERROR_GENERIC, _("no file selected"));
+		}
 		goto out;
+	}
+
+	if (!g_file_test (filename, G_FILE_TEST_EXISTS | G_FILE_TEST_IS_REGULAR)) {
+		success = FALSE;
+		goto out;
+	}
 
 	setting = (NMSetting8021x *) nm_setting_802_1x_new ();
 
+	success = FALSE;
 	if (item_type == TYPE_PRIVATE_KEY) {
-		if (!nm_setting_802_1x_set_private_key (setting, filename, password, NM_SETTING_802_1X_CK_SCHEME_PATH, out_format, &error)) {
-			g_warning ("Error: couldn't verify private key: %d %s",
-			           error ? error->code : -1, error ? error->message : "(none)");
-			g_clear_error (&error);
-		} else
+		if (nm_setting_802_1x_set_private_key (setting, filename, password, NM_SETTING_802_1X_CK_SCHEME_PATH, out_format, error))
 			success = TRUE;
 	} else if (item_type == TYPE_CLIENT_CERT) {
-		if (!nm_setting_802_1x_set_client_cert (setting, filename, NM_SETTING_802_1X_CK_SCHEME_PATH, out_format, &error)) {
-			g_warning ("Error: couldn't verify client certificate: %d %s",
-			           error ? error->code : -1, error ? error->message : "(none)");
-			g_clear_error (&error);
-		} else
+		if (nm_setting_802_1x_set_client_cert (setting, filename, NM_SETTING_802_1X_CK_SCHEME_PATH, out_format, error))
 			success = TRUE;
 	} else if (item_type == TYPE_CA_CERT) {
-		if (!nm_setting_802_1x_set_ca_cert (setting, filename, NM_SETTING_802_1X_CK_SCHEME_PATH, out_format, &error)) {
-			g_warning ("Error: couldn't verify CA certificate: %d %s",
-			           error ? error->code : -1, error ? error->message : "(none)");
-			g_clear_error (&error);
-		} else
+		if (nm_setting_802_1x_set_ca_cert (setting, filename, NM_SETTING_802_1X_CK_SCHEME_PATH, out_format, error))
 			success = TRUE;
 	} else
 		g_warning ("%s: invalid item type %d.", __func__, item_type);
@@ -261,32 +259,16 @@ eap_method_validate_filepicker (GtkBuilder *builder,
 
 out:
 	g_free (filename);
+
+	if (!success && error && !*error)
+		g_set_error_literal (error, NMA_ERROR, NMA_ERROR_GENERIC, _("unspecified error validating eap-method file"));
+
+	if (success)
+		widget_unset_error (widget);
+	else
+		widget_set_error (widget);
 	return success;
 }
-
-static const char *
-find_tag (const char *tag, const char *buf, gsize len)
-{
-	gsize i, taglen;
-
-	taglen = strlen (tag);
-	if (len < taglen)
-		return NULL;
-
-	for (i = 0; i < len - taglen + 1; i++) {
-		if (memcmp (buf + i, tag, taglen) == 0)
-			return buf + i;
-	}
-	return NULL;
-}
-
-static const char *pem_rsa_key_begin = "-----BEGIN RSA PRIVATE KEY-----";
-static const char *pem_dsa_key_begin = "-----BEGIN DSA PRIVATE KEY-----";
-static const char *pem_pkcs8_enc_key_begin = "-----BEGIN ENCRYPTED PRIVATE KEY-----";
-static const char *pem_pkcs8_dec_key_begin = "-----BEGIN PRIVATE KEY-----";
-static const char *pem_cert_begin = "-----BEGIN CERTIFICATE-----";
-static const char *proc_type_tag = "Proc-Type: 4,ENCRYPTED";
-static const char *dek_info_tag = "DEK-Info:";
 
 static gboolean
 file_has_extension (const char *filename, const char *extensions[])
@@ -312,6 +294,31 @@ file_has_extension (const char *filename, const char *extensions[])
 
 	return found;
 }
+
+#if !LIBNM_BUILD
+static const char *
+find_tag (const char *tag, const char *buf, gsize len)
+{
+	gsize i, taglen;
+
+	taglen = strlen (tag);
+	if (len < taglen)
+		return NULL;
+
+	for (i = 0; i < len - taglen + 1; i++) {
+		if (memcmp (buf + i, tag, taglen) == 0)
+			return buf + i;
+	}
+	return NULL;
+}
+
+static const char *pem_rsa_key_begin = "-----BEGIN RSA PRIVATE KEY-----";
+static const char *pem_dsa_key_begin = "-----BEGIN DSA PRIVATE KEY-----";
+static const char *pem_pkcs8_enc_key_begin = "-----BEGIN ENCRYPTED PRIVATE KEY-----";
+static const char *pem_pkcs8_dec_key_begin = "-----BEGIN PRIVATE KEY-----";
+static const char *pem_cert_begin = "-----BEGIN CERTIFICATE-----";
+static const char *proc_type_tag = "Proc-Type: 4,ENCRYPTED";
+static const char *dek_info_tag = "DEK-Info:";
 
 static gboolean
 pem_file_is_encrypted (const char *buffer, gsize bytes_read)
@@ -391,13 +398,12 @@ out:
 	close (fd);
 	return success;
 }
+#endif
 
 static gboolean
 default_filter_privkey (const GtkFileFilterInfo *filter_info, gpointer user_data)
 {
 	const char *extensions[] = { ".der", ".pem", ".p12", ".key", NULL };
-	gboolean require_encrypted = !!user_data;
-	gboolean is_encrypted = TRUE;
 
 	if (!filter_info->filename)
 		return FALSE;
@@ -405,11 +411,7 @@ default_filter_privkey (const GtkFileFilterInfo *filter_info, gpointer user_data
 	if (!file_has_extension (filter_info->filename, extensions))
 		return FALSE;
 
-	if (   !file_is_der_or_pem (filter_info->filename, TRUE, &is_encrypted)
-	    && !nm_utils_file_is_pkcs12 (filter_info->filename))
-		return FALSE;
-
-	return require_encrypted ? is_encrypted : TRUE;
+	return TRUE;
 }
 
 static gboolean
@@ -421,9 +423,6 @@ default_filter_cert (const GtkFileFilterInfo *filter_info, gpointer user_data)
 		return FALSE;
 
 	if (!file_has_extension (filter_info->filename, extensions))
-		return FALSE;
-
-	if (!file_is_der_or_pem (filter_info->filename, FALSE, NULL))
 		return FALSE;
 
 	return TRUE;
@@ -449,8 +448,22 @@ gboolean
 eap_method_is_encrypted_private_key (const char *path)
 {
 	GtkFileFilterInfo info = { .filename = path };
+	gboolean is_encrypted;
 
-	return default_filter_privkey (&info, (gpointer) TRUE);
+	if (!default_filter_privkey (&info, NULL))
+		return FALSE;
+
+#if LIBNM_BUILD
+	is_encrypted = FALSE;
+	if (!nm_utils_file_is_private_key (path, &is_encrypted))
+		return FALSE;
+#else
+	is_encrypted = TRUE;
+	if (   !file_is_der_or_pem (path, TRUE, &is_encrypted)
+	    && !nm_utils_file_is_pkcs12 (path))
+		return FALSE;
+#endif
+	return is_encrypted;
 }
 
 /* Some methods (PEAP, TLS, TTLS) require a CA certificate. The user can choose

@@ -15,15 +15,10 @@
  * with this program; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
- * Copyright 2012 Red Hat, Inc.
+ * Copyright 2012 - 2014 Red Hat, Inc.
  */
 
-#include "config.h"
-
-#include <gtk/gtk.h>
-#include <glib/gi18n.h>
-
-#include <nm-setting-connection.h>
+#include "nm-default.h"
 
 #include "page-general.h"
 
@@ -32,12 +27,14 @@ G_DEFINE_TYPE (CEPageGeneral, ce_page_general, CE_TYPE_PAGE)
 #define CE_PAGE_GENERAL_GET_PRIVATE(o) (G_TYPE_INSTANCE_GET_PRIVATE ((o), CE_TYPE_PAGE_GENERAL, CEPageGeneralPrivate))
 
 typedef struct {
-	NMRemoteSettings *remote_settings;
 	NMSettingConnection *setting;
 
 	gboolean is_vpn;
 
+	GDBusProxy *fw_proxy;
+	GCancellable *cancellable;
 	GtkComboBoxText *firewall_zone;
+	GtkLabel *firewall_zone_label;
 	char **zones;
 	gboolean got_zones;
 
@@ -46,6 +43,8 @@ typedef struct {
 	GtkListStore *dependent_vpn_store;
 
 	GtkWidget *autoconnect;
+	GtkWidget *autoconnect_prio_label;
+	GtkSpinButton *autoconnect_prio;
 	GtkWidget *all_checkbutton;
 
 	gboolean setup_finished;
@@ -53,8 +52,7 @@ typedef struct {
 
 /* TRANSLATORS: Default zone set for firewall, when no zone is selected */
 #define FIREWALL_ZONE_DEFAULT _("Default")
-#define FIREWALL_ZONE_TOOLTIP_AVAILBALE _("The zone defines the trust level of the connection. Default is not a regular zone, selecting it results in the use of the default zone set in the firewall. Only usable if firewalld is active.")
-#define FIREWALL_ZONE_TOOLTIP_UNAVAILBALE _("FirewallD is not running.")
+#define FIREWALL_ZONE_TOOLTIP _("The zone defines the trust level of the connection. Default is not a regular zone, selecting it results in the use of the default zone set in the firewall. Only usable if firewalld is active.")
 
 enum {
 	COL_ID,
@@ -65,54 +63,69 @@ enum {
 static void populate_firewall_zones_ui (CEPageGeneral *self);
 
 static void
-zones_reply (DBusGProxy *proxy, DBusGProxyCall *call, gpointer user_data)
+get_zones_cb (GDBusProxy *proxy, GAsyncResult *result, gpointer user_data)
 {
-	CEPageGeneral *self = user_data;
-	CEPageGeneralPrivate *priv = CE_PAGE_GENERAL_GET_PRIVATE (self);
+	CEPageGeneral *self;
+	CEPageGeneralPrivate *priv;
+	GVariant *variant = NULL;
 	GError *error = NULL;
 
-	if (!dbus_g_proxy_end_call (proxy, call, &error,
-	                            G_TYPE_STRV, &priv->zones,
-	                            G_TYPE_INVALID)) {
-		g_warning ("Failed to get zones from FirewallD: (%d) %s", error->code, error->message);
+	variant = g_dbus_proxy_call_finish (proxy, result, &error);
+	if (g_error_matches (error, G_IO_ERROR, G_IO_ERROR_CANCELLED)) {
+		g_clear_error (&error);
+		return;
 	}
 
-	priv->got_zones = TRUE;
+	self = CE_PAGE_GENERAL (user_data);
+	priv = CE_PAGE_GENERAL_GET_PRIVATE (self);
 
+	if (variant) {
+		if (g_variant_is_of_type (variant, G_VARIANT_TYPE ("(as)")))
+			g_variant_get (variant, "(^as)", &priv->zones);
+		else {
+			g_warning ("Failed to get zones from FirewallD: invalid reply type '%s'",
+			           g_variant_get_type_string (variant));
+		}
+		g_variant_unref (variant);
+	} else if (!g_error_matches (error, G_DBUS_ERROR, G_DBUS_ERROR_SERVICE_UNKNOWN))
+		g_warning ("Failed to get zones from FirewallD: %s", error->message);
+
+	priv->got_zones = TRUE;
 	if (priv->setup_finished)
 		populate_firewall_zones_ui (self);
 
 	g_clear_error (&error);
-	g_object_unref (proxy);
+	g_clear_object (&priv->cancellable);
+	g_clear_object (&priv->fw_proxy);
 }
 
-/* Get FirewallD zones */
 static void
-get_zones_from_firewall (CEPageGeneral *self)
+on_fw_proxy_acquired (GObject *object, GAsyncResult *result, gpointer user_data)
 {
-	CEPageGeneralPrivate *priv = CE_PAGE_GENERAL_GET_PRIVATE (self);
-	DBusGConnection *bus;
-	DBusGProxy *proxy;
+	CEPageGeneral *self;
+	CEPageGeneralPrivate *priv;
+	GError *error = NULL;
+	GDBusProxy *proxy;
 
-	/* Initialize got_zones to TRUE for cases there's no FirewallD */
-	priv->got_zones = TRUE;
-
-	bus = dbus_g_bus_get (DBUS_BUS_SYSTEM, NULL);
-	if (bus) {
-		proxy = dbus_g_proxy_new_for_name (bus,
-		                                   "org.fedoraproject.FirewallD1",
-		                                   "/org/fedoraproject/FirewallD1",
-		                                   "org.fedoraproject.FirewallD1.zone");
-		/* Call getZones to get list of available FirewallD zones */
-		if (proxy) {
-			dbus_g_proxy_begin_call (proxy, "getZones",
-			                         zones_reply, self, NULL,
-			                         G_TYPE_INVALID);
-			priv->got_zones = FALSE;
-		}
-
-		dbus_g_connection_unref (bus);
+	proxy = g_dbus_proxy_new_for_bus_finish (result, &error);
+	if (!proxy) {
+		g_warning ("Failed to get FirewallD proxy: %s", error->message);
+		g_clear_error (&error);
+		return;
 	}
+
+	self = CE_PAGE_GENERAL (user_data);
+	priv = CE_PAGE_GENERAL_GET_PRIVATE (self);
+
+	priv->fw_proxy = proxy;
+	g_dbus_proxy_call (priv->fw_proxy,
+	                   "getZones",
+	                   NULL,
+	                   G_DBUS_CALL_FLAGS_NONE,
+	                   -1,
+	                   priv->cancellable,
+	                   (GAsyncReadyCallback) get_zones_cb,
+	                   self);
 }
 
 static void
@@ -120,24 +133,31 @@ general_private_init (CEPageGeneral *self)
 {
 	CEPageGeneralPrivate *priv = CE_PAGE_GENERAL_GET_PRIVATE (self);
 	GtkBuilder *builder;
-	GtkWidget *align;
-	GtkLabel *label;
+	GtkWidget *vbox;
 
 	builder = CE_PAGE (self)->builder;
 
 	/*-- Firewall zone --*/
 	priv->firewall_zone = GTK_COMBO_BOX_TEXT (gtk_combo_box_text_new ());
 
-	align = GTK_WIDGET (gtk_builder_get_object (builder, "firewall_zone_alignment"));
-	gtk_container_add (GTK_CONTAINER (align), GTK_WIDGET (priv->firewall_zone));
-	gtk_widget_show_all (GTK_WIDGET (priv->firewall_zone));
+	vbox = GTK_WIDGET (gtk_builder_get_object (builder, "firewall_zone_vbox"));
+	gtk_container_add (GTK_CONTAINER (vbox), GTK_WIDGET (priv->firewall_zone));
 
 	/* Get zones from FirewallD */
-	get_zones_from_firewall (self);
+	priv->cancellable = g_cancellable_new ();
+	g_dbus_proxy_new_for_bus (G_BUS_TYPE_SYSTEM,
+	                          G_DBUS_PROXY_FLAGS_DO_NOT_LOAD_PROPERTIES,
+	                          NULL,
+	                          "org.fedoraproject.FirewallD1",
+	                          "/org/fedoraproject/FirewallD1",
+	                          "org.fedoraproject.FirewallD1.zone",
+	                          priv->cancellable,
+	                          (GAsyncReadyCallback) on_fw_proxy_acquired,
+	                          self);
 
 	/* Set mnemonic widget for device Firewall zone label */
-	label = GTK_LABEL (gtk_builder_get_object (builder, "firewall_zone_label"));
-	gtk_label_set_mnemonic_widget (label, GTK_WIDGET (priv->firewall_zone));
+	priv->firewall_zone_label = GTK_LABEL (gtk_builder_get_object (builder, "firewall_zone_label"));
+	gtk_label_set_mnemonic_widget (priv->firewall_zone_label, GTK_WIDGET (priv->firewall_zone));
 
 	/*-- Dependent VPN connection --*/
 	priv->dependent_vpn_checkbox = GTK_TOGGLE_BUTTON (gtk_builder_get_object (builder, "dependent_vpn_checkbox"));
@@ -145,22 +165,23 @@ general_private_init (CEPageGeneral *self)
 	priv->dependent_vpn_store = GTK_LIST_STORE (gtk_builder_get_object (builder, "dependent_vpn_model"));
 
 	priv->autoconnect = GTK_WIDGET (gtk_builder_get_object (builder, "connection_autoconnect"));
+	priv->autoconnect_prio_label = GTK_WIDGET (gtk_builder_get_object (builder, "autoconnect_prio_label"));
+	priv->autoconnect_prio = GTK_SPIN_BUTTON (gtk_builder_get_object (builder, "autoconnect_prio"));
 	priv->all_checkbutton = GTK_WIDGET (gtk_builder_get_object (builder, "system_checkbutton"));
 }
 
 static void
 dispose (GObject *object)
 {
-	CEPageGeneral *self = CE_PAGE_GENERAL (object);
-	CEPageGeneralPrivate *priv = CE_PAGE_GENERAL_GET_PRIVATE (self);
+	CEPageGeneralPrivate *priv = CE_PAGE_GENERAL_GET_PRIVATE (object);
 
-	if (priv->remote_settings) {
-		g_object_unref (priv->remote_settings);
-		priv->remote_settings = NULL;
+	if (priv->cancellable) {
+		g_cancellable_cancel (priv->cancellable);
+		g_clear_object (&priv->cancellable);
 	}
+	g_clear_object (&priv->fw_proxy);
 
-	g_strfreev (priv->zones);
-	priv->zones = NULL;
+	g_clear_pointer (&priv->zones, g_strfreev);
 
 	G_OBJECT_CLASS (ce_page_general_parent_class)->dispose (object);
 }
@@ -177,6 +198,16 @@ vpn_checkbox_toggled (GtkToggleButton *button, gpointer user_data)
 	CEPageGeneralPrivate *priv = CE_PAGE_GENERAL_GET_PRIVATE (user_data);
 
 	gtk_widget_set_sensitive (GTK_WIDGET (priv->dependent_vpn), gtk_toggle_button_get_active (priv->dependent_vpn_checkbox));
+	ce_page_changed (CE_PAGE (user_data));
+}
+
+static void
+autoconnect_checkbox_toggled (GtkToggleButton *button, gpointer user_data)
+{
+	CEPageGeneralPrivate *priv = CE_PAGE_GENERAL_GET_PRIVATE (user_data);
+
+	gtk_widget_set_sensitive (GTK_WIDGET (priv->autoconnect_prio),
+	                          gtk_toggle_button_get_active (GTK_TOGGLE_BUTTON (priv->autoconnect)));
 	ce_page_changed (CE_PAGE (user_data));
 }
 
@@ -209,11 +240,10 @@ populate_firewall_zones_ui (CEPageGeneral *self)
 
 	/* Zone tooltip and availability */
 	if (priv->zones) {
-		gtk_widget_set_tooltip_text (GTK_WIDGET (priv->firewall_zone), FIREWALL_ZONE_TOOLTIP_AVAILBALE);
+		gtk_widget_set_tooltip_text (GTK_WIDGET (priv->firewall_zone), FIREWALL_ZONE_TOOLTIP);
 		gtk_widget_set_sensitive (GTK_WIDGET (priv->firewall_zone), TRUE);
-	} else {
-		gtk_widget_set_tooltip_text (GTK_WIDGET (priv->firewall_zone), FIREWALL_ZONE_TOOLTIP_UNAVAILBALE);
-		gtk_widget_set_sensitive (GTK_WIDGET (priv->firewall_zone), FALSE);
+		gtk_widget_show_all (GTK_WIDGET (priv->firewall_zone));
+		gtk_widget_show (GTK_WIDGET (priv->firewall_zone_label));
 	}
 
 	stuff_changed (NULL, self);
@@ -226,7 +256,8 @@ populate_ui (CEPageGeneral *self)
 	NMSettingConnection *setting = priv->setting;
 	const char *vpn_uuid;
 	guint32 combo_idx = 0, idx;
-	GSList *con_list, *l;
+	const GPtrArray *con_list;
+	int i;
 	GtkTreeIter iter;
 	gboolean global_connection = TRUE;
 
@@ -236,12 +267,13 @@ populate_ui (CEPageGeneral *self)
 
 	/* Secondary UUID (VPN) */
 	vpn_uuid = nm_setting_connection_get_secondary (setting, 0);
-	con_list = nm_remote_settings_list_connections (priv->remote_settings);
-	for (l = con_list, idx = 0, combo_idx = 0; l; l = l->next) {
-		const char *uuid = nm_connection_get_uuid (l->data);
-		const char *id = nm_connection_get_id (l->data);
+	con_list = nm_client_get_connections (CE_PAGE (self)->client);
+	for (i = 0, idx = 0, combo_idx = 0; i < con_list->len; i++) {
+		NMConnection *conn = con_list->pdata[i];
+		const char *uuid = nm_connection_get_uuid (conn);
+		const char *id = nm_connection_get_id (conn);
 
-		if (!nm_connection_is_type (l->data, NM_SETTING_VPN_SETTING_NAME))
+		if (!nm_connection_is_type (conn, NM_SETTING_VPN_SETTING_NAME))
 			continue;
 
 		gtk_list_store_append (priv->dependent_vpn_store, &iter);
@@ -250,7 +282,6 @@ populate_ui (CEPageGeneral *self)
 			combo_idx = idx;
 		idx++;
 	}
-	g_slist_free (con_list);
 	gtk_combo_box_set_active (GTK_COMBO_BOX (priv->dependent_vpn), combo_idx);
 
 	/* We don't support multiple VPNs at the moment, so hide secondary
@@ -266,12 +297,19 @@ populate_ui (CEPageGeneral *self)
 	gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (priv->autoconnect),
 	                              nm_setting_connection_get_autoconnect (priv->setting));
 
+	/* Connection priority */
+	gtk_spin_button_set_value (priv->autoconnect_prio,
+	                           nm_setting_connection_get_autoconnect_priority(priv->setting));
+
 	/* VPN connections don't have a blanket "autoconnect" as that is too coarse
 	 * a behavior, instead the user configures another connection to start the
 	 * VPN on success.
 	 */
-	if (priv->is_vpn)
+	if (priv->is_vpn) {
 		gtk_widget_hide (priv->autoconnect);
+		gtk_widget_hide (priv->autoconnect_prio_label);
+		gtk_widget_hide (GTK_WIDGET (priv->autoconnect_prio));
+	}
 
 	/* 'All users may connect to this network' checkbox */
 	if (nm_setting_connection_get_num_permissions (priv->setting))
@@ -302,15 +340,17 @@ finish_setup (CEPageGeneral *self, gpointer unused, GError *error, gpointer user
 	gtk_widget_set_sensitive (GTK_WIDGET (priv->dependent_vpn), any_dependent_vpn);
 	g_signal_connect (priv->dependent_vpn, "changed", G_CALLBACK (stuff_changed), self);
 
-	g_signal_connect (priv->autoconnect, "toggled", G_CALLBACK (stuff_changed), self);
+	g_signal_connect (priv->autoconnect, "toggled", G_CALLBACK (autoconnect_checkbox_toggled), self);
+	g_signal_connect (priv->autoconnect_prio, "value-changed", G_CALLBACK (stuff_changed), self);
+	gtk_widget_set_sensitive (GTK_WIDGET (priv->autoconnect_prio), nm_setting_connection_get_autoconnect (priv->setting));
 	g_signal_connect (priv->all_checkbutton, "toggled", G_CALLBACK (stuff_changed), self);
 }
 
 CEPage *
-ce_page_general_new (NMConnection *connection,
+ce_page_general_new (NMConnectionEditor *editor,
+                     NMConnection *connection,
                      GtkWindow *parent_window,
                      NMClient *client,
-                     NMRemoteSettings *settings,
                      const char **out_secrets_setting_name,
                      GError **error)
 {
@@ -318,11 +358,11 @@ ce_page_general_new (NMConnection *connection,
 	CEPageGeneralPrivate *priv;
 
 	self = CE_PAGE_GENERAL (ce_page_new (CE_TYPE_PAGE_GENERAL,
+	                                     editor,
 	                                     connection,
 	                                     parent_window,
 	                                     client,
-	                                     settings,
-	                                     UIDIR "/ce-page-general.ui",
+	                                     "/org/freedesktop/network-manager-applet/ce-page-general.ui",
 	                                     "GeneralPage",
 	                                     _("General")));
 	if (!self) {
@@ -333,8 +373,6 @@ ce_page_general_new (NMConnection *connection,
 
 	general_private_init (self);
 	priv = CE_PAGE_GENERAL_GET_PRIVATE (self);
-
-	priv->remote_settings = g_object_ref (settings);
 
 	priv->setting = nm_connection_get_setting_connection (connection);
 	if (!priv->setting) {
@@ -353,21 +391,21 @@ static void
 ui_to_setting (CEPageGeneral *self)
 {
 	CEPageGeneralPrivate *priv = CE_PAGE_GENERAL_GET_PRIVATE (self);
-	char *zone;
 	char *uuid = NULL;
 	GtkTreeIter iter;
 	gboolean autoconnect = FALSE, everyone = FALSE;
+	int prio;
 
 	/* We can't take and save zone until the combo was properly initialized. Zones
 	 * are received from FirewallD asynchronously; got_zones indicates we are ready.
 	 */
 	if (priv->got_zones) {
+		char *zone;
+
 		zone = gtk_combo_box_text_get_active_text (priv->firewall_zone);
-
-		if (g_strcmp0 (zone, FIREWALL_ZONE_DEFAULT) == 0)
-			zone = NULL;
-		g_object_set (priv->setting, NM_SETTING_CONNECTION_ZONE, zone, NULL);
-
+		g_object_set (priv->setting, NM_SETTING_CONNECTION_ZONE,
+		              (g_strcmp0 (zone, FIREWALL_ZONE_DEFAULT) != 0) ? zone : NULL,
+		              NULL);
 		g_free (zone);
 	}
 
@@ -382,7 +420,11 @@ ui_to_setting (CEPageGeneral *self)
 	g_free (uuid);
 
 	autoconnect = gtk_toggle_button_get_active (GTK_TOGGLE_BUTTON (priv->autoconnect));
-	g_object_set (G_OBJECT (priv->setting), NM_SETTING_CONNECTION_AUTOCONNECT, autoconnect, NULL);
+	prio = gtk_spin_button_get_value_as_int (priv->autoconnect_prio);
+	g_object_set (G_OBJECT (priv->setting),
+	              NM_SETTING_CONNECTION_AUTOCONNECT, autoconnect,
+	              NM_SETTING_CONNECTION_AUTOCONNECT_PRIORITY, prio,
+	              NULL);
 
 	/* Handle visibility */
 	everyone = gtk_toggle_button_get_active (GTK_TOGGLE_BUTTON (priv->all_checkbutton));
@@ -394,7 +436,7 @@ ui_to_setting (CEPageGeneral *self)
 }
 
 static gboolean
-validate (CEPage *page, NMConnection *connection, GError **error)
+ce_page_validate_v (CEPage *page, NMConnection *connection, GError **error)
 {
 	CEPageGeneral *self = CE_PAGE_GENERAL (page);
 	CEPageGeneralPrivate *priv = CE_PAGE_GENERAL_GET_PRIVATE (self);
@@ -419,6 +461,6 @@ ce_page_general_class_init (CEPageGeneralClass *connection_class)
 	/* virtual methods */
 	object_class->dispose = dispose;
 
-	parent_class->validate = validate;
+	parent_class->ce_page_validate_v = ce_page_validate_v;
 }
 

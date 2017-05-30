@@ -15,19 +15,17 @@
  * with this program; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
- * Copyright 2012 Red Hat, Inc.
+ * Copyright 2012 - 2014 Red Hat, Inc.
  */
 
 #ifndef __PAGE_MASTER_H__
 #define __PAGE_MASTER_H__
 
-#include <nm-connection.h>
-
 #include <glib.h>
 #include <glib-object.h>
 
 #include "ce-page.h"
-#include "new-connection.h"
+#include "connection-helpers.h"
 
 #define CE_TYPE_PAGE_MASTER            (ce_page_master_get_type ())
 #define CE_PAGE_MASTER(obj)            (G_TYPE_CHECK_INSTANCE_CAST ((obj), CE_TYPE_PAGE_MASTER, CEPageMaster))

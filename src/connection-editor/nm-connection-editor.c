@@ -19,43 +19,18 @@
  * with this program; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
- * (C) Copyright 2007 - 2011 Red Hat, Inc.
- * (C) Copyright 2007 - 2008 Novell, Inc.
+ * Copyright 2007 - 2014 Red Hat, Inc.
+ * Copyright 2007 - 2008 Novell, Inc.
  */
 
-#include "config.h"
+#include "nm-default.h"
 
 #include <string.h>
 #include <sys/types.h>
 #include <unistd.h>
-
-#include <gtk/gtk.h>
 #include <gdk/gdkx.h>
-#include <glib/gi18n.h>
-
-#include <nm-setting-connection.h>
-#include <nm-setting-ip4-config.h>
-#include <nm-setting-ip6-config.h>
-#include <nm-setting-wired.h>
-#include <nm-setting-8021x.h>
-#include <nm-setting-wireless.h>
-#include <nm-setting-wireless-security.h>
-#include <nm-setting-vpn.h>
-#include <nm-setting-pppoe.h>
-#include <nm-setting-ppp.h>
-#include <nm-setting-gsm.h>
-#include <nm-setting-cdma.h>
-#include <nm-setting-wimax.h>
-#include <nm-setting-infiniband.h>
-#include <nm-setting-bond.h>
-#include <nm-setting-team.h>
-#include <nm-setting-bridge.h>
-#include <nm-utils.h>
-
-#include <nm-remote-connection.h>
 
 #include "nm-connection-editor.h"
-#include "nma-marshal.h"
 
 #include "ce-page.h"
 #include "page-general.h"
@@ -63,13 +38,15 @@
 #include "page-8021x-security.h"
 #include "page-wifi.h"
 #include "page-wifi-security.h"
+#include "page-proxy.h"
 #include "page-ip4.h"
 #include "page-ip6.h"
+#include "page-ip-tunnel.h"
 #include "page-dsl.h"
 #include "page-mobile.h"
+#include "page-bluetooth.h"
 #include "page-ppp.h"
 #include "page-vpn.h"
-#include "page-wimax.h"
 #include "page-infiniband.h"
 #include "page-bond.h"
 #include "page-team.h"
@@ -81,6 +58,8 @@
 #include "ce-polkit-button.h"
 #include "vpn-helpers.h"
 #include "eap-method.h"
+
+extern gboolean nm_ce_keep_above;
 
 G_DEFINE_TYPE (NMConnectionEditor, nm_connection_editor, G_TYPE_OBJECT)
 
@@ -128,7 +107,7 @@ nm_connection_editor_update_title (NMConnectionEditor *editor)
 }
 
 static gboolean
-ui_to_setting (NMConnectionEditor *editor)
+ui_to_setting (NMConnectionEditor *editor, GError **error)
 {
 	NMSettingConnection *s_con;
 	GtkWidget *widget;
@@ -143,8 +122,10 @@ ui_to_setting (NMConnectionEditor *editor)
 	g_object_set (G_OBJECT (s_con), NM_SETTING_CONNECTION_ID, name, NULL);
 	nm_connection_editor_update_title (editor);
 
-	if (!name || !strlen (name))
+	if (!name || !strlen (name)) {
+		g_set_error_literal (error, NMA_ERROR, NMA_ERROR_GENERIC, _("Missing connection name"));
 		return FALSE;
+	}
 
 	return TRUE;
 }
@@ -200,42 +181,53 @@ static void
 connection_editor_validate (NMConnectionEditor *editor)
 {
 	NMSettingConnection *s_con;
-	gboolean valid = FALSE, printed = FALSE;
 	GSList *iter;
+	gs_free char *validation_error = NULL;
+	GError *error = NULL;
 
-	if (!editor_is_initialized (editor))
-		goto done;
+	if (!editor_is_initialized (editor)) {
+		validation_error = g_strdup (_("Editor initializing…"));
+		goto done_silent;
+	}
 
 	s_con = nm_connection_get_setting_connection (editor->connection);
 	g_assert (s_con);
-	if (nm_setting_connection_get_read_only (s_con))
+	if (nm_setting_connection_get_read_only (s_con)) {
+		validation_error = g_strdup (_("Connection cannot be modified"));
 		goto done;
+	}
 
-	if (!ui_to_setting (editor))
+	if (!ui_to_setting (editor, &error)) {
+		validation_error = g_strdup (error->message);
+		g_clear_error (&error);
 		goto done;
+	}
 
-	valid = TRUE;
 	for (iter = editor->pages; iter; iter = g_slist_next (iter)) {
-		GError *error = NULL;
-
 		if (!ce_page_validate (CE_PAGE (iter->data), editor->connection, &error)) {
-			valid = FALSE;
-
-			/* FIXME: use the error to indicate which UI widgets are invalid */
-			if (!printed) {
-				printed = TRUE;
-				if (error) {
-					g_warning ("Invalid setting %s: %s", CE_PAGE (iter->data)->title, error->message);
-					g_error_free (error);
-				} else
-					g_warning ("Invalid setting %s", CE_PAGE (iter->data)->title);
+			if (!validation_error) {
+				validation_error = g_strdup_printf (_("Invalid setting %s: %s"),
+				                                    CE_PAGE (iter->data)->title,
+				                                    error->message);
 			}
+			g_clear_error (&error);
 		}
 	}
 
 done:
-	ce_polkit_button_set_master_sensitive (CE_POLKIT_BUTTON (editor->ok_button), valid);
-	gtk_widget_set_sensitive (editor->export_button, valid);
+	if (g_strcmp0 (validation_error, editor->last_validation_error) != 0) {
+		if (editor->last_validation_error && !validation_error)
+			g_message ("Connection validates and can be saved");
+		else if (validation_error)
+			g_message ("Cannot save connection due to error: %s", validation_error);
+		g_free (editor->last_validation_error);
+		editor->last_validation_error = g_strdup (validation_error);
+	}
+
+done_silent:
+	ce_polkit_button_set_validation_error (CE_POLKIT_BUTTON (editor->ok_button), validation_error);
+	gtk_widget_set_sensitive (editor->export_button, !validation_error);
+
 	update_sensitivity (editor);
 }
 
@@ -249,8 +241,8 @@ ok_button_actionable_cb (GtkWidget *button,
 
 static void
 permissions_changed_cb (NMClient *client,
-	                    NMClientPermission permission,
-	                    NMClientPermissionResult result,                       
+                        NMClientPermission permission,
+                        NMClientPermissionResult result,
                         NMConnectionEditor *editor)
 {
 	if (permission != NM_CLIENT_PERMISSION_SETTINGS_MODIFY_SYSTEM)
@@ -265,6 +257,12 @@ permissions_changed_cb (NMClient *client,
 }
 
 static void
+destroy_inter_page_item (gpointer data)
+{
+	return;
+}
+
+static void
 nm_connection_editor_init (NMConnectionEditor *editor)
 {
 	GtkWidget *dialog;
@@ -273,11 +271,11 @@ nm_connection_editor_init (NMConnectionEditor *editor)
 
 	editor->builder = gtk_builder_new ();
 
-	if (!gtk_builder_add_objects_from_file (editor->builder,
-	                                        UIDIR "/nm-connection-editor.ui",
-	                                        (char **) objects,
-	                                        &error)) {
-		g_warning ("Couldn't load builder file " UIDIR "/nm-connection-editor.ui: %s", error->message);
+	if (!gtk_builder_add_objects_from_resource (editor->builder,
+	                                            "/org/freedesktop/network-manager-applet/nm-connection-editor.ui",
+	                                            (char **) objects,
+	                                            &error)) {
+		g_warning ("Couldn't load builder resource " "/org/freedesktop/network-manager-applet/nm-connection-editor.ui: %s", error->message);
 		g_error_free (error);
 
 		dialog = gtk_message_dialog_new (NULL, 0,
@@ -292,8 +290,13 @@ nm_connection_editor_init (NMConnectionEditor *editor)
 	}
 
 	editor->window = GTK_WIDGET (gtk_builder_get_object (editor->builder, "nm-connection-editor"));
+	if (nm_ce_keep_above)
+		gtk_window_set_keep_above (GTK_WINDOW (editor->window), TRUE);
+
 	editor->cancel_button = GTK_WIDGET (gtk_builder_get_object (editor->builder, "cancel_button"));
 	editor->export_button = GTK_WIDGET (gtk_builder_get_object (editor->builder, "export_button"));
+
+	editor->inter_page_hash = g_hash_table_new_full (g_direct_hash, g_direct_equal, NULL, (GDestroyNotify) destroy_inter_page_item);
 }
 
 static void
@@ -307,65 +310,52 @@ static void
 dispose (GObject *object)
 {
 	NMConnectionEditor *editor = NM_CONNECTION_EDITOR (object);
-	GSList *iter;
 
-	if (editor->disposed)
-		goto out;
 	editor->disposed = TRUE;
 
-	g_hash_table_remove (active_editors, editor->orig_connection);
+	if (active_editors && editor->orig_connection)
+		g_hash_table_remove (active_editors, editor->orig_connection);
 
-	g_slist_foreach (editor->initializing_pages, (GFunc) g_object_unref, NULL);
-	g_slist_free (editor->initializing_pages);
+	g_slist_free_full (editor->initializing_pages, g_object_unref);
 	editor->initializing_pages = NULL;
 
-	g_slist_foreach (editor->pages, (GFunc) g_object_unref, NULL);
-	g_slist_free (editor->pages);
+	g_slist_free_full (editor->pages, g_object_unref);
 	editor->pages = NULL;
 
 	/* Mark any in-progress secrets call as canceled; it will clean up after itself. */
 	if (editor->secrets_call)
 		editor->secrets_call->canceled = TRUE;
 
-	/* Kill any pending secrets calls */
-	for (iter = editor->pending_secrets_calls; iter; iter = g_slist_next (iter)) {
-		get_secrets_info_free ((GetSecretsInfo *) iter->data);
-	}
-	g_slist_free (editor->pending_secrets_calls);
-	editor->pending_secrets_calls = NULL;
-
-	if (editor->validate_id) {
-		g_source_remove (editor->validate_id);
-		editor->validate_id = 0;
+	while (editor->pending_secrets_calls) {
+		get_secrets_info_free ((GetSecretsInfo *) editor->pending_secrets_calls->data);
+		editor->pending_secrets_calls = g_slist_delete_link (editor->pending_secrets_calls, editor->pending_secrets_calls);
 	}
 
-	if (editor->connection) {
-		g_object_unref (editor->connection);
-		editor->connection = NULL;
-	}
-	if (editor->orig_connection) {
-		g_object_unref (editor->orig_connection);
-		editor->orig_connection = NULL;
-	}
+	nm_clear_g_source (&editor->validate_id);
+
+	g_clear_object (&editor->connection);
+	g_clear_object (&editor->orig_connection);
+
 	if (editor->window) {
 		gtk_widget_destroy (editor->window);
 		editor->window = NULL;
 	}
-	if (editor->parent_window) {
-		g_object_unref (editor->parent_window);
-		editor->parent_window = NULL;
+	g_clear_object (&editor->parent_window);
+	g_clear_object (&editor->builder);
+
+	nm_clear_g_signal_handler (editor->client, &editor->permission_id);
+	g_clear_object (&editor->client);
+
+	g_clear_pointer (&editor->last_validation_error, g_free);
+
+	if (editor->inter_page_hash) {
+		g_hash_table_destroy (editor->inter_page_hash);
+		editor->inter_page_hash = NULL;
 	}
-	if (editor->builder) {
-		g_object_unref (editor->builder);
-		editor->builder = NULL;
-	}
 
-	g_signal_handler_disconnect (editor->client, editor->permission_id);
-	g_object_unref (editor->client);
+	g_slist_free_full (editor->unsupported_properties, g_free);
+	editor->unsupported_properties = NULL;
 
-	g_object_unref (editor->settings);
-
-out:
 	G_OBJECT_CLASS (nm_connection_editor_parent_class)->dispose (object);
 }
 
@@ -383,16 +373,14 @@ nm_connection_editor_class_init (NMConnectionEditorClass *klass)
 		              G_OBJECT_CLASS_TYPE (object_class),
 		              G_SIGNAL_RUN_FIRST,
 		              G_STRUCT_OFFSET (NMConnectionEditorClass, done),
-		              NULL, NULL,
-		              _nma_marshal_VOID__ENUM,
+		              NULL, NULL, NULL,
 		              G_TYPE_NONE, 1, GTK_TYPE_RESPONSE_TYPE);
 }
 
 NMConnectionEditor *
 nm_connection_editor_new (GtkWindow *parent_window,
                           NMConnection *connection,
-                          NMClient *client,
-                          NMRemoteSettings *settings)
+                          NMClient *client)
 {
 	NMConnectionEditor *editor;
 	GtkWidget *hbox;
@@ -401,12 +389,11 @@ nm_connection_editor_new (GtkWindow *parent_window,
 
 	g_return_val_if_fail (NM_IS_CONNECTION (connection), NULL);
 
-	is_new = !nm_remote_settings_get_connection_by_uuid (settings, nm_connection_get_uuid (connection));
+	is_new = !nm_client_get_connection_by_uuid (client, nm_connection_get_uuid (connection));
 
 	editor = g_object_new (NM_TYPE_CONNECTION_EDITOR, NULL);
 	editor->parent_window = parent_window ? g_object_ref (parent_window) : NULL;
 	editor->client = g_object_ref (client);
-	editor->settings = g_object_ref (settings);
 	editor->is_new_connection = is_new;
 
 	editor->can_modify = nm_client_get_permission_result (client, NM_CLIENT_PERMISSION_SETTINGS_MODIFY_SYSTEM);
@@ -442,8 +429,8 @@ nm_connection_editor_new (GtkWindow *parent_window,
 	}
 
 	if (!active_editors)
-		active_editors = g_hash_table_new (NULL, NULL);
-	g_hash_table_insert (active_editors, connection, editor);
+		active_editors = g_hash_table_new_full (NULL, NULL, g_object_unref, NULL);
+	g_hash_table_insert (active_editors, g_object_ref (connection), editor);
 
 	return editor;
 }
@@ -451,10 +438,7 @@ nm_connection_editor_new (GtkWindow *parent_window,
 NMConnectionEditor *
 nm_connection_editor_get (NMConnection *connection)
 {
-	if (!active_editors)
-		return NULL;
-
-	return g_hash_table_lookup (active_editors, connection);
+	return active_editors ? g_hash_table_lookup (active_editors, connection) : NULL;
 }
 
 /* Returns an editor for @slave's master, if any */
@@ -478,7 +462,7 @@ nm_connection_editor_get_master (NMConnection *slave)
 	while (g_hash_table_iter_next (&iter, &connection, &editor)) {
 		if (!g_strcmp0 (master, nm_connection_get_uuid (connection)))
 			return editor;
-		if (!g_strcmp0 (master, nm_connection_get_virtual_iface_name (connection)))
+		if (!g_strcmp0 (master, nm_connection_get_interface_name (connection)))
 			return editor;
 	}
 
@@ -514,6 +498,14 @@ static void
 page_changed (CEPage *page, gpointer user_data)
 {
 	NMConnectionEditor *editor = NM_CONNECTION_EDITOR (user_data);
+	GSList *iter;
+
+	/* Do page interdependent changes */
+	for (iter = editor->pages; iter; iter = g_slist_next (iter))
+		ce_page_inter_page_change (CE_PAGE (iter->data));
+
+	if (editor_is_initialized (editor))
+		nm_connection_editor_inter_page_clear_data (editor);
 
 	connection_editor_validate (editor);
 }
@@ -532,6 +524,7 @@ static void
 recheck_initialization (NMConnectionEditor *editor)
 {
 	GtkNotebook *notebook;
+	GtkLabel *label;
 
 	if (!editor_is_initialized (editor) || editor->init_run)
 		return;
@@ -553,6 +546,27 @@ recheck_initialization (NMConnectionEditor *editor)
 	if (editor->validate_id)
 		g_source_remove (editor->validate_id);
 	editor->validate_id = g_idle_add (idle_validate, editor);
+
+	if (editor->unsupported_properties) {
+		GString *str;
+		GSList *iter;
+		gs_free char *tooltip = NULL;
+
+		str = g_string_new ("Unsupported properties: ");
+
+		for (iter = editor->unsupported_properties; iter; iter = g_slist_next (iter)) {
+			g_string_append (str, (char *) iter->data);
+			if (iter->next)
+				g_string_append (str, ", ");
+		}
+		tooltip = g_string_free (str, FALSE);
+
+		label = GTK_LABEL (gtk_builder_get_object (editor->builder, "message_label"));
+		gtk_label_set_text (label,
+		                    _("Warning: the connection contains some properties not supported by the editor. "
+		                      "They will be cleared upon save."));
+		gtk_widget_set_tooltip_text (GTK_WIDGET (label), tooltip);
+	}
 }
 
 static void
@@ -609,18 +623,22 @@ page_initialized (CEPage *page, GError *error, gpointer user_data)
 static void request_secrets (GetSecretsInfo *info);
 
 static void
-get_secrets_cb (NMRemoteConnection *connection,
-                GHashTable *secrets,
-                GError *error,
+get_secrets_cb (GObject *object,
+                GAsyncResult *result,
                 gpointer user_data)
 {
+	NMRemoteConnection *connection = NM_REMOTE_CONNECTION (object);
 	GetSecretsInfo *info = user_data;
 	NMConnectionEditor *self;
+	GVariant *secrets;
+	GError *error = NULL;
 
 	if (info->canceled) {
 		get_secrets_info_free (info);
 		return;
 	}
+
+	secrets = nm_remote_connection_get_secrets_finish (connection, result, &error);
 
 	self = info->self;
 
@@ -647,10 +665,8 @@ request_secrets (GetSecretsInfo *info)
 {
 	g_return_if_fail (info != NULL);
 
-	nm_remote_connection_get_secrets (NM_REMOTE_CONNECTION (info->self->orig_connection),
-	                                  info->setting_name,
-	                                  get_secrets_cb,
-	                                  info);
+	nm_remote_connection_get_secrets_async (NM_REMOTE_CONNECTION (info->self->orig_connection),
+	                                        info->setting_name, NULL, get_secrets_cb, info);
 }
 
 static void
@@ -700,7 +716,7 @@ add_page (NMConnectionEditor *editor,
 	g_return_val_if_fail (func != NULL, FALSE);
 	g_return_val_if_fail (connection != NULL, FALSE);
 
-	page = (*func) (connection, GTK_WINDOW (editor->window), editor->client, editor->settings,
+	page = (*func) (editor, connection, GTK_WINDOW (editor->window), editor->client,
 	                &secrets_setting_name, error);
 	if (page) {
 		g_object_set_data_full (G_OBJECT (page),
@@ -718,6 +734,44 @@ add_page (NMConnectionEditor *editor,
 	return !!page;
 }
 
+void
+nm_connection_editor_add_unsupported_property (NMConnectionEditor *editor, const char *name)
+{
+	editor->unsupported_properties = g_slist_append (editor->unsupported_properties, g_strdup (name));
+}
+
+void
+nm_connection_editor_check_unsupported_properties (NMConnectionEditor *editor,
+                                                   NMSetting *setting,
+                                                   const char * const *known_props)
+{
+	gs_free GParamSpec **property_specs = NULL;
+	GParamSpec *prop_spec;
+	guint n_property_specs;
+	guint i;
+	char tmp[1024];
+
+	if (!setting)
+		return;
+
+	property_specs = g_object_class_list_properties (G_OBJECT_GET_CLASS (setting),
+	                                                 &n_property_specs);
+	for (i = 0; i < n_property_specs; i++) {
+		prop_spec = property_specs[i];
+		if (   !g_strv_contains (known_props, prop_spec->name)
+		    && !nm_streq0 (prop_spec->name, NM_SETTING_NAME)) {
+			nm_auto_unset_gvalue GValue value = G_VALUE_INIT;
+
+			g_value_init (&value, prop_spec->value_type);
+			g_object_get_property (G_OBJECT (setting), prop_spec->name, &value);
+			if (!g_param_value_defaults (prop_spec, &value)) {
+				nm_sprintf_buf (tmp, "%s.%s", nm_setting_get_name (setting), prop_spec->name);
+				nm_connection_editor_add_unsupported_property (editor, tmp);
+			}
+		}
+	}
+}
+
 static gboolean
 nm_connection_editor_set_connection (NMConnectionEditor *editor,
                                      NMConnection *orig_connection,
@@ -728,7 +782,6 @@ nm_connection_editor_set_connection (NMConnectionEditor *editor,
 	const char *slave_type;
 	gboolean success = FALSE;
 	GSList *iter, *copy;
-	gboolean add_ip4 = TRUE, add_ip6 = TRUE;
 
 	g_return_val_if_fail (NM_IS_CONNECTION_EDITOR (editor), FALSE);
 	g_return_val_if_fail (NM_IS_CONNECTION (orig_connection), FALSE);
@@ -737,7 +790,7 @@ nm_connection_editor_set_connection (NMConnectionEditor *editor,
 	if (editor->connection)
 		g_object_unref (editor->connection);
 
-	editor->connection = nm_connection_duplicate (orig_connection);
+	editor->connection = nm_simple_connection_new_clone (orig_connection);
 
 	editor->orig_connection = g_object_ref (orig_connection);
 	nm_connection_editor_update_title (editor);
@@ -766,7 +819,9 @@ nm_connection_editor_set_connection (NMConnectionEditor *editor,
 	} else if (!strcmp (connection_type, NM_SETTING_VPN_SETTING_NAME)) {
 		if (!add_page (editor, ce_page_vpn_new, editor->connection, error))
 			goto out;
-		add_ip6 = vpn_supports_ipv6 (editor->connection);
+	} else if (!strcmp (connection_type, NM_SETTING_IP_TUNNEL_SETTING_NAME)) {
+		if (!add_page (editor, ce_page_ip_tunnel_new, editor->connection, error))
+			goto out;
 	} else if (!strcmp (connection_type, NM_SETTING_PPPOE_SETTING_NAME)) {
 		if (!add_page (editor, ce_page_dsl_new, editor->connection, error))
 			goto out;
@@ -774,17 +829,25 @@ nm_connection_editor_set_connection (NMConnectionEditor *editor,
 			goto out;
 		if (!add_page (editor, ce_page_ppp_new, editor->connection, error))
 			goto out;
-		add_ip6 = FALSE;
 	} else if (!strcmp (connection_type, NM_SETTING_GSM_SETTING_NAME) || 
 	           !strcmp (connection_type, NM_SETTING_CDMA_SETTING_NAME)) {
 		if (!add_page (editor, ce_page_mobile_new, editor->connection, error))
 			goto out;
 		if (!add_page (editor, ce_page_ppp_new, editor->connection, error))
 			goto out;
-		add_ip6 = FALSE;
-	} else if (!strcmp (connection_type, NM_SETTING_WIMAX_SETTING_NAME)) {
-		if (!add_page (editor, ce_page_wimax_new, editor->connection, error))
+	} else if (!strcmp (connection_type, NM_SETTING_BLUETOOTH_SETTING_NAME)) {
+		NMSettingBluetooth *s_bt = nm_connection_get_setting_bluetooth (editor->connection);
+		const char *type = nm_setting_bluetooth_get_connection_type (s_bt);
+		g_assert (type);
+
+		if (!add_page (editor, ce_page_bluetooth_new, editor->connection, error))
 			goto out;
+		if (!g_strcmp0 (type, "dun")) {
+			if (!add_page (editor, ce_page_mobile_new, editor->connection, error))
+				goto out;
+			if (!add_page (editor, ce_page_ppp_new, editor->connection, error))
+				goto out;
+		}
 	} else if (!strcmp (connection_type, NM_SETTING_INFINIBAND_SETTING_NAME)) {
 		if (!add_page (editor, ce_page_infiniband_new, editor->connection, error))
 			goto out;
@@ -805,21 +868,26 @@ nm_connection_editor_set_connection (NMConnectionEditor *editor,
 	}
 
 	slave_type = nm_setting_connection_get_slave_type (s_con);
-	if (!g_strcmp0 (slave_type, NM_SETTING_BOND_SETTING_NAME))
-		add_ip4 = add_ip6 = FALSE;
-	else if (!g_strcmp0 (slave_type, NM_SETTING_TEAM_SETTING_NAME)) {
-		add_ip4 = add_ip6 = FALSE;
+	if (!g_strcmp0 (slave_type, NM_SETTING_TEAM_SETTING_NAME)) {
 		if (!add_page (editor, ce_page_team_port_new, editor->connection, error))
 			goto out;
 	} else if (!g_strcmp0 (slave_type, NM_SETTING_BRIDGE_SETTING_NAME)) {
-		add_ip4 = add_ip6 = FALSE;
 		if (!add_page (editor, ce_page_bridge_port_new, editor->connection, error))
 			goto out;
 	}
 
-	if (add_ip4 && !add_page (editor, ce_page_ip4_new, editor->connection, error))
+#if NM_LIBNM_COMPAT_PROXY_SUPPORTED
+	G_GNUC_BEGIN_IGNORE_DEPRECATIONS
+	if (   nm_connection_get_setting_proxy (editor->connection)
+	    && !add_page (editor, ce_page_proxy_new, editor->connection, error))
 		goto out;
-	if (add_ip6 && !add_page (editor, ce_page_ip6_new, editor->connection, error))
+	G_GNUC_END_IGNORE_DEPRECATIONS
+#endif
+	if (   nm_connection_get_setting_ip4_config (editor->connection)
+	    && !add_page (editor, ce_page_ip4_new, editor->connection, error))
+		goto out;
+	if (   nm_connection_get_setting_ip6_config (editor->connection)
+	    && !add_page (editor, ce_page_ip6_new, editor->connection, error))
 		goto out;
 
 	/* After all pages are created, then kick off secrets requests that any
@@ -891,22 +959,25 @@ editor_closed_cb (GtkWidget *widget, GdkEvent *event, gpointer user_data)
 }
 
 static void
-added_connection_cb (NMRemoteSettings *settings,
-                     NMRemoteConnection *connection,
-                     GError *error,
+added_connection_cb (GObject *client,
+                     GAsyncResult *result,
                      gpointer user_data)
 {
 	NMConnectionEditor *self = user_data;
+	NMRemoteConnection *connection;
+	GError *error = NULL;
 
 	nm_connection_editor_set_busy (self, FALSE);
 
+	connection = nm_client_add_connection_finish (NM_CLIENT (client), result, &error);
 	if (error) {
 		nm_connection_editor_error (self->parent_window, _("Connection add failed"),
 		                            "%s", error->message);
-
 		/* Leave the editor open */
 		return;
 	}
+	g_clear_object (&connection);
+	g_clear_error (&error);
 
 	g_signal_emit (self, editor_signals[EDITOR_DONE], 0, GTK_RESPONSE_OK);
 }
@@ -919,9 +990,15 @@ update_complete (NMConnectionEditor *self, GError *error)
 }
 
 static void
-updated_connection_cb (NMRemoteConnection *connection, GError *error, gpointer user_data)
+updated_connection_cb (GObject *connection,
+                       GAsyncResult *result,
+                       gpointer user_data)
 {
 	NMConnectionEditor *self = NM_CONNECTION_EDITOR (user_data);
+	GError *error = NULL;
+
+	nm_remote_connection_commit_changes_finish (NM_REMOTE_CONNECTION (connection),
+	                                            result, &error);
 
 	/* Clear secrets so they don't lay around in memory; they'll get requested
 	 * again anyway next time the connection is edited.
@@ -929,39 +1006,30 @@ updated_connection_cb (NMRemoteConnection *connection, GError *error, gpointer u
 	nm_connection_clear_secrets (NM_CONNECTION (connection));
 
 	update_complete (self, error);
+	g_clear_error (&error);
 }
 
 static void
 ok_button_clicked_save_connection (NMConnectionEditor *self)
 {
-	GError *error = NULL;
-
 	/* Copy the modified connection to the original connection */
-	if (!nm_connection_replace_settings_from_connection (self->orig_connection,
-	                                                     self->connection,
-	                                                     &error)) {
-		nm_connection_editor_error (GTK_WINDOW (self->window),
-		                            _("Error saving connection"),
-		                            _("The property '%s' / '%s' is invalid: %d"),
-		                            g_type_name (nm_connection_lookup_setting_type_by_quark (error->domain)),
-		                            error->message, error->code);
-		g_error_free (error);
-		return;
-	}
-
+	nm_connection_replace_settings_from_connection (self->orig_connection,
+	                                                self->connection);
 	nm_connection_editor_set_busy (self, TRUE);
 
 	/* Save new CA cert ignore values to GSettings */
 	eap_method_ca_cert_ignore_save (self->connection);
 
 	if (self->is_new_connection) {
-		nm_remote_settings_add_connection (self->settings,
-		                                   self->orig_connection,
-		                                   added_connection_cb,
-		                                   self);
+		nm_client_add_connection_async (self->client,
+		                                self->orig_connection,
+		                                TRUE,
+		                                NULL,
+		                                added_connection_cb,
+		                                self);
 	} else {
-		nm_remote_connection_commit_changes (NM_REMOTE_CONNECTION (self->orig_connection),
-		                                     updated_connection_cb, self);
+		nm_remote_connection_commit_changes_async (NM_REMOTE_CONNECTION (self->orig_connection),
+		                                           TRUE, NULL, updated_connection_cb, self);
 	}
 }
 
@@ -969,6 +1037,7 @@ static void
 ok_button_clicked_cb (GtkWidget *widget, gpointer user_data)
 {
 	NMConnectionEditor *self = NM_CONNECTION_EDITOR (user_data);
+	GSList *iter;
 
 	/* If the dialog is busy waiting for authorization or something,
 	 * don't destroy it until authorization returns.
@@ -979,28 +1048,39 @@ ok_button_clicked_cb (GtkWidget *widget, gpointer user_data)
 	/* Validate one last time to ensure all pages update the connection */
 	connection_editor_validate (self);
 
+	/* Perform page specific actions before the connection is saved */
+	for (iter = self->pages; iter; iter = g_slist_next (iter))
+		ce_page_last_update (CE_PAGE (iter->data), self->connection, NULL);
+
 	ok_button_clicked_save_connection (self);
 }
 
 static void
-vpn_export_get_secrets_cb (NMRemoteConnection *connection,
-                           GHashTable *secrets,
-                           GError *error,
+vpn_export_get_secrets_cb (GObject *object,
+                           GAsyncResult *result,
                            gpointer user_data)
 {
 	NMConnection *tmp;
+	GVariant *secrets;
+	GError *error = NULL;
+
+	secrets = nm_remote_connection_get_secrets_finish (NM_REMOTE_CONNECTION (object),
+	                                                   result, &error);
 
 	/* We don't really care about errors; if the user couldn't authenticate
 	 * then just let them export everything except secrets.  Duplicate the
 	 * connection so that we don't let secrets sit around in the original
 	 * one.
 	 */
-	tmp = nm_connection_duplicate (NM_CONNECTION (connection));
+	tmp = nm_simple_connection_new_clone (NM_CONNECTION (object));
 	g_assert (tmp);
 	if (secrets)
 		nm_connection_update_secrets (tmp, NM_SETTING_VPN_SETTING_NAME, secrets, NULL);
 	vpn_export (tmp);
 	g_object_unref (tmp);
+	if (secrets)
+		g_variant_ref (secrets);
+	g_clear_error (&error);
 }
 
 static void
@@ -1010,10 +1090,11 @@ export_button_clicked_cb (GtkWidget *widget, gpointer user_data)
 
 	if (NM_IS_REMOTE_CONNECTION (self->orig_connection)) {
 		/* Grab secrets if we can */
-		nm_remote_connection_get_secrets (NM_REMOTE_CONNECTION (self->orig_connection),
-		                                  NM_SETTING_VPN_SETTING_NAME,
-		                                  vpn_export_get_secrets_cb,
-		                                  self);
+		nm_remote_connection_get_secrets_async (NM_REMOTE_CONNECTION (self->orig_connection),
+		                                        NM_SETTING_VPN_SETTING_NAME,
+		                                        NULL,
+		                                        vpn_export_get_secrets_cb,
+		                                        self);
 	} else
 		vpn_export (self->connection);
 }
@@ -1065,10 +1146,9 @@ nm_connection_editor_set_busy (NMConnectionEditor *editor, gboolean busy)
 
 static void
 nm_connection_editor_dialog (GtkWindow *parent, GtkMessageType type, const char *heading,
-                             const char *format, va_list args)
+                             const char *message)
 {
 	GtkWidget *dialog;
-	char *message;
 
 	dialog = gtk_message_dialog_new (parent,
 	                                 GTK_DIALOG_DESTROY_WITH_PARENT,
@@ -1076,10 +1156,7 @@ nm_connection_editor_dialog (GtkWindow *parent, GtkMessageType type, const char 
 	                                 GTK_BUTTONS_CLOSE,
 	                                 "%s", heading);
 
-	message = g_strdup_vprintf (format, args);
-
 	gtk_message_dialog_format_secondary_text (GTK_MESSAGE_DIALOG (dialog), "%s", message);
-	g_free (message);
 
 	gtk_widget_show_all (dialog);
 	gtk_window_present (GTK_WINDOW (dialog));
@@ -1091,19 +1168,41 @@ void
 nm_connection_editor_error (GtkWindow *parent, const char *heading, const char *format, ...)
 {
 	va_list args;
+	gs_free char *message = NULL;
 
 	va_start (args, format);
-	nm_connection_editor_dialog (parent, GTK_MESSAGE_ERROR, heading, format, args);
+	message = g_strdup_vprintf (format, args);
 	va_end (args);
+	nm_connection_editor_dialog (parent, GTK_MESSAGE_ERROR, heading, message);
 }
 
 void
 nm_connection_editor_warning (GtkWindow *parent, const char *heading, const char *format, ...)
 {
 	va_list args;
+	gs_free char *message = NULL;
 
 	va_start (args, format);
-	nm_connection_editor_dialog (parent, GTK_MESSAGE_WARNING, heading, format, args);
+	message = g_strdup_vprintf (format, args);
 	va_end (args);
+	nm_connection_editor_dialog (parent, GTK_MESSAGE_WARNING, heading, message);
+}
+
+void
+nm_connection_editor_inter_page_set_value (NMConnectionEditor *editor, InterPageChangeType type, gpointer value)
+{
+	g_hash_table_insert (editor->inter_page_hash, GUINT_TO_POINTER (type), value);
+}
+
+gboolean
+nm_connection_editor_inter_page_get_value (NMConnectionEditor *editor, InterPageChangeType type, gpointer *value)
+{
+	return g_hash_table_lookup_extended (editor->inter_page_hash, GUINT_TO_POINTER (type), NULL, value);
+}
+
+void
+nm_connection_editor_inter_page_clear_data (NMConnectionEditor *editor)
+{
+	g_hash_table_remove_all (editor->inter_page_hash);
 }
 

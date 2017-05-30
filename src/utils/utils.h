@@ -17,66 +17,29 @@
  * with this program; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
- * (C) Copyright 2007 - 2012 Red Hat, Inc.
+ * Copyright 2007 - 2015 Red Hat, Inc.
  */
 
 #ifndef UTILS_H
 #define UTILS_H
 
-#include <glib.h>
-#include <gtk/gtk.h>
-#include <nm-connection.h>
-#include <nm-device.h>
 #include <net/ethernet.h>
-#include <nm-access-point.h>
-
-
-#if defined (__GNUC__)
-#define _NM_PRAGMA_WARNING_DO(warning)       G_STRINGIFY(GCC diagnostic ignored warning)
-#elif defined (__clang__)
-#define _NM_PRAGMA_WARNING_DO(warning)       G_STRINGIFY(clang diagnostic ignored warning)
-#endif
-
-/* you can only suppress a specific warning that the compiler
- * understands. Otherwise you will get another compiler warning
- * about invalid pragma option.
- * It's not that bad however, because gcc and clang often have the
- * same name for the same warning. */
-
-#if defined (__GNUC__)
-#define NM_PRAGMA_WARNING_DISABLE(warning) \
-        _Pragma("GCC diagnostic push"); \
-        _Pragma(_NM_PRAGMA_WARNING_DO(warning))
-#elif defined (__clang__)
-#define NM_PRAGMA_WARNING_DISABLE(warning) \
-        _Pragma("clang diagnostic push"); \
-        _Pragma(_NM_PRAGMA_WARNING_DO(warning))
-#else
-#define NM_PRAGMA_WARNING_DISABLE(warning)
-#endif
-
-#if defined (__GNUC__)
-#define NM_PRAGMA_WARNING_REENABLE \
-    _Pragma("GCC diagnostic pop")
-#elif defined (__clang__)
-#define NM_PRAGMA_WARNING_REENABLE \
-    _Pragma("clang diagnostic pop")
-#else
-#define NM_PRAGMA_WARNING_REENABLE
-#endif
-
-
-guint32 utils_freq_to_channel (guint32 freq);
-guint32 utils_channel_to_freq (guint32 channel, char *band);
-guint32 utils_find_next_channel (guint32 channel, int direction, char *band);
 
 gboolean utils_ether_addr_valid (const struct ether_addr *test_addr);
 
+#if LIBNM_BUILD
+char *utils_hash_ap (GBytes *ssid,
+                     NM80211Mode mode,
+                     guint32 flags,
+                     guint32 wpa_flags,
+                     guint32 rsn_flags);
+#else
 char *utils_hash_ap (const GByteArray *ssid,
                      NM80211Mode mode,
                      guint32 flags,
                      guint32 wpa_flags,
                      guint32 rsn_flags);
+#endif
 
 char *utils_escape_notify_message (const char *src);
 
@@ -111,14 +74,39 @@ gboolean utils_filter_editable_on_insert_text (GtkEditable *editable,
                                                UtilsFilterGtkEditableFunc validate_character,
                                                gpointer block_func);
 
-void utils_setup_password_storage (NMConnection *connection,
-                                   const char *setting_name,
-                                   GtkWidget *passwd_entry,
-                                   const char *password_flags_name);
-void utils_update_password_storage (NMSetting *setting,
-                                    NMSettingSecretFlags secret_flags,
-                                    GtkWidget *passwd_entry,
-                                    const char *password_flags_name);
+void utils_override_bg_color (GtkWidget *widget, GdkRGBA *rgba);
+void utils_set_cell_background (GtkCellRenderer *cell,
+                                const char *color,
+                                const char *value);
+
+void utils_fake_return_key (GdkEventKey *event);
+
+void widget_set_error   (GtkWidget *widget);
+void widget_unset_error (GtkWidget *widget);
+
+gboolean utils_tree_model_get_int64 (GtkTreeModel *model,
+                                     GtkTreeIter *iter,
+                                     int column,
+                                     gint64 min_value,
+                                     gint64 max_value,
+                                     gboolean fail_if_missing,
+                                     gint64 *out,
+                                     char **out_raw);
+
+gboolean utils_tree_model_get_address (GtkTreeModel *model,
+                                       GtkTreeIter *iter,
+                                       int column,
+                                       int family,
+                                       gboolean fail_if_missing,
+                                       char **out,
+                                       char **out_raw);
+
+gboolean utils_tree_model_get_ip4_prefix (GtkTreeModel *model,
+                                          GtkTreeIter *iter,
+                                          int column,
+                                          gboolean fail_if_missing,
+                                          guint32 *out,
+                                          char **out_raw);
 
 #endif /* UTILS_H */
 
