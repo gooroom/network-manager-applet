@@ -17,12 +17,12 @@
  * with this program; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
- * (C) Copyright 2010 Red Hat, Inc.
+ * Copyright 2010 - 2014 Red Hat, Inc.
  */
 
+#include "nm-default.h"
+
 #include <ctype.h>
-#include <glib/gi18n.h>
-#include <nm-utils.h>
 
 #define SECRET_API_SUBJECT_TO_CHANGE
 #include <libsecret/secret.h>
@@ -38,53 +38,65 @@ mobile_helper_get_status_pixbuf (guint32 quality,
                                  guint32 access_tech,
                                  NMApplet *applet)
 {
-	GdkPixbuf *pixbuf, *qual_pixbuf, *wwan_pixbuf, *tmp;
-
-	wwan_pixbuf = nma_icon_check_and_load ("nm-wwan-tower", &applet->wwan_tower_icon, applet);
+	GdkPixbuf *pixbuf, *qual_pixbuf, *tmp;
 
 	if (!quality_valid)
 		quality = 0;
-	qual_pixbuf = mobile_helper_get_quality_icon (quality, applet);
+	qual_pixbuf = nma_icon_check_and_load (mobile_helper_get_quality_icon_name (quality), applet);
 
 	pixbuf = gdk_pixbuf_new (GDK_COLORSPACE_RGB,
 	                         TRUE,
-	                         gdk_pixbuf_get_bits_per_sample (qual_pixbuf),
-	                         gdk_pixbuf_get_width (qual_pixbuf),
-	                         gdk_pixbuf_get_height (qual_pixbuf));
+	                         qual_pixbuf ? gdk_pixbuf_get_bits_per_sample (qual_pixbuf) : 8,
+	                         qual_pixbuf ? gdk_pixbuf_get_width (qual_pixbuf) : 22,
+	                         qual_pixbuf ? gdk_pixbuf_get_height (qual_pixbuf) : 22);
 	gdk_pixbuf_fill (pixbuf, 0xFFFFFF00);
 
 	/* Composite the tower icon into the final icon at the bottom layer */
-	gdk_pixbuf_composite (wwan_pixbuf, pixbuf,
-	                      0, 0,
-	                      gdk_pixbuf_get_width (wwan_pixbuf),
-						  gdk_pixbuf_get_height (wwan_pixbuf),
-						  0, 0, 1.0, 1.0,
-						  GDK_INTERP_BILINEAR, 255);
+	tmp = nma_icon_check_and_load ("nm-wwan-tower", applet);
+	if (tmp) {
+		gdk_pixbuf_composite (tmp, pixbuf,
+		                      0, 0,
+		                      gdk_pixbuf_get_width (tmp),
+		                      gdk_pixbuf_get_height (tmp),
+		                      0, 0, 1.0, 1.0,
+		                      GDK_INTERP_BILINEAR, 255);
+	}
 
 	/* Composite the signal quality onto the icon on top of the WWAN tower */
-	gdk_pixbuf_composite (qual_pixbuf, pixbuf,
-	                      0, 0,
-	                      gdk_pixbuf_get_width (qual_pixbuf),
-						  gdk_pixbuf_get_height (qual_pixbuf),
-						  0, 0, 1.0, 1.0,
-						  GDK_INTERP_BILINEAR, 255);
+	if (qual_pixbuf) {
+		gdk_pixbuf_composite (qual_pixbuf, pixbuf,
+		                      0, 0,
+		                      gdk_pixbuf_get_width (qual_pixbuf),
+		                      gdk_pixbuf_get_height (qual_pixbuf),
+		                      0, 0, 1.0, 1.0,
+		                      GDK_INTERP_BILINEAR, 255);
+	}
 
 	/* And finally the roaming or technology icon */
 	if (state == MB_STATE_ROAMING) {
-		tmp = nma_icon_check_and_load ("nm-mb-roam", &applet->mb_roaming_icon, applet);
-		gdk_pixbuf_composite (tmp, pixbuf, 0, 0,
-		                      gdk_pixbuf_get_width (tmp),
-							  gdk_pixbuf_get_height (tmp),
-							  0, 0, 1.0, 1.0,
-							  GDK_INTERP_BILINEAR, 255);
-	} else {
-		tmp = mobile_helper_get_tech_icon (access_tech, applet);
+		tmp = nma_icon_check_and_load ("nm-mb-roam", applet);
 		if (tmp) {
 			gdk_pixbuf_composite (tmp, pixbuf, 0, 0,
-				                  gdk_pixbuf_get_width (tmp),
-								  gdk_pixbuf_get_height (tmp),
-								  0, 0, 1.0, 1.0,
-								  GDK_INTERP_BILINEAR, 255);
+			                      gdk_pixbuf_get_width (tmp),
+			                      gdk_pixbuf_get_height (tmp),
+			                       0, 0, 1.0, 1.0,
+			                      GDK_INTERP_BILINEAR, 255);
+		}
+	} else {
+		const gchar *tech_icon_name;
+
+		/* Only try to add the access tech info icon if we get a valid
+		 * access tech reported. */
+		tech_icon_name = mobile_helper_get_tech_icon_name (access_tech);
+		if (tech_icon_name) {
+			tmp = nma_icon_check_and_load (tech_icon_name, applet);
+			if (tmp) {
+				gdk_pixbuf_composite (tmp, pixbuf, 0, 0,
+				                      gdk_pixbuf_get_width (tmp),
+				                      gdk_pixbuf_get_height (tmp),
+				                      0, 0, 1.0, 1.0,
+				                      GDK_INTERP_BILINEAR, 255);
+			}
 		}
 	}
 
@@ -92,44 +104,43 @@ mobile_helper_get_status_pixbuf (guint32 quality,
 	return pixbuf;
 }
 
-GdkPixbuf *
-mobile_helper_get_quality_icon (guint32 quality, NMApplet *applet)
+const char *
+mobile_helper_get_quality_icon_name (guint32 quality)
 {
 	if (quality > 80)
-		return nma_icon_check_and_load ("nm-signal-100", &applet->wifi_100_icon, applet);
+		return "nm-signal-100";
 	else if (quality > 55)
-		return nma_icon_check_and_load ("nm-signal-75", &applet->wifi_75_icon, applet);
+		return "nm-signal-75";
 	else if (quality > 30)
-		return nma_icon_check_and_load ("nm-signal-50", &applet->wifi_50_icon, applet);
+		return "nm-signal-50";
 	else if (quality > 5)
-		return nma_icon_check_and_load ("nm-signal-25", &applet->wifi_25_icon, applet);
-
-	return nma_icon_check_and_load ("nm-signal-00", &applet->wifi_00_icon, applet);
+		return "nm-signal-25";
+	else
+		return "nm-signal-00";
 }
 
-GdkPixbuf *
-mobile_helper_get_tech_icon (guint32 tech, NMApplet *applet)
+const char *
+mobile_helper_get_tech_icon_name (guint32 tech)
 {
 	switch (tech) {
 	case MB_TECH_1XRTT:
-		return nma_icon_check_and_load ("nm-tech-cdma-1x", &applet->mb_tech_1x_icon, applet);
+		return "nm-tech-cdma-1x";
 	case MB_TECH_EVDO:
-		return nma_icon_check_and_load ("nm-tech-evdo", &applet->mb_tech_evdo_icon, applet);
+		return "nm-tech-evdo";
 	case MB_TECH_GSM:
 	case MB_TECH_GPRS:
-		return nma_icon_check_and_load ("nm-tech-gprs", &applet->mb_tech_gprs_icon, applet);
+		return "nm-tech-gprs";
 	case MB_TECH_EDGE:
-		return nma_icon_check_and_load ("nm-tech-edge", &applet->mb_tech_edge_icon, applet);
+		return "nm-tech-edge";
 	case MB_TECH_UMTS:
-		return nma_icon_check_and_load ("nm-tech-umts", &applet->mb_tech_umts_icon, applet);
+		return "nm-tech-umts";
 	case MB_TECH_HSDPA:
 	case MB_TECH_HSUPA:
 	case MB_TECH_HSPA:
 	case MB_TECH_HSPA_PLUS:
-		return nma_icon_check_and_load ("nm-tech-hspa", &applet->mb_tech_hspa_icon, applet);
+		return "nm-tech-hspa";
 	case MB_TECH_LTE:
-		return nma_icon_check_and_load ("nm-tech-lte", &applet->mb_tech_lte_icon, applet);
-	case MB_TECH_WIMAX:
+		return "nm-tech-lte";
 	default:
 		return NULL;
 	}
@@ -163,7 +174,7 @@ mobile_wizard_done (NMAMobileWizard *wizard,
 			goto done;
 		}
 
-		connection = nm_connection_new ();
+		connection = nm_simple_connection_new ();
 
 		if (method->devtype == NM_DEVICE_MODEM_CAPABILITY_CDMA_EVDO) {
 			setting_name = NM_SETTING_CDMA_SETTING_NAME;
@@ -187,14 +198,13 @@ mobile_wizard_done (NMAMobileWizard *wizard,
 		} else
 			g_assert_not_reached ();
 
-		/* Serial setting */
-		setting = nm_setting_serial_new ();
-		g_object_set (setting,
-		              NM_SETTING_SERIAL_BAUD, 115200,
-		              NM_SETTING_SERIAL_BITS, 8,
-		              NM_SETTING_SERIAL_PARITY, 'n',
-		              NM_SETTING_SERIAL_STOPBITS, 1,
-		              NULL);
+		/* Default to IPv4 & IPv6 'automatic' addressing */
+		setting = nm_setting_ip4_config_new ();
+		g_object_set (setting, NM_SETTING_IP_CONFIG_METHOD, NM_SETTING_IP4_CONFIG_METHOD_AUTO, NULL);
+		nm_connection_add_setting (connection, setting);
+
+		setting = nm_setting_ip6_config_new ();
+		g_object_set (setting, NM_SETTING_IP_CONFIG_METHOD, NM_SETTING_IP6_CONFIG_METHOD_AUTO, NULL);
 		nm_connection_add_setting (connection, setting);
 
 		nm_connection_add_setting (connection, nm_setting_ppp_new ());
@@ -208,6 +218,9 @@ mobile_wizard_done (NMAMobileWizard *wizard,
 		              NM_SETTING_CONNECTION_AUTOCONNECT, FALSE,
 		              NM_SETTING_CONNECTION_UUID, uuid,
 		              NULL);
+		/* Make the new connection available only for the current user */
+		nm_setting_connection_add_permission ((NMSettingConnection *) setting,
+		                                      "user", g_get_user_name (), NULL);
 		g_free (uuid);
 		g_free (id);
 		nm_connection_add_setting (connection, setting);
@@ -375,7 +388,7 @@ get_secrets_cb (GtkDialog *dialog,
 				              NULL);
 			} else {
 				error = g_error_new (NM_SECRET_AGENT_ERROR,
-				                     NM_SECRET_AGENT_ERROR_INTERNAL_ERROR,
+				                     NM_SECRET_AGENT_ERROR_FAILED,
 				                     "%s.%d (%s): no GSM setting",
 				                     __FILE__, __LINE__, __func__);
 			}
@@ -389,7 +402,7 @@ get_secrets_cb (GtkDialog *dialog,
 					              NULL);
 				} else {
 					error = g_error_new (NM_SECRET_AGENT_ERROR,
-					                     NM_SECRET_AGENT_ERROR_INTERNAL_ERROR,
+					                     NM_SECRET_AGENT_ERROR_FAILED,
 					                     "%s.%d (%s): no CDMA setting",
 					                     __FILE__, __LINE__, __func__);
 				}
@@ -496,7 +509,7 @@ mobile_helper_get_secrets (NMDeviceModemCapabilities capabilities,
 	if (!req->hints || !g_strv_length (req->hints)) {
 		g_set_error (error,
 		             NM_SECRET_AGENT_ERROR,
-		             NM_SECRET_AGENT_ERROR_INTERNAL_ERROR,
+		             NM_SECRET_AGENT_ERROR_FAILED,
 		             "%s.%d (%s): missing secrets hints.",
 		             __FILE__, __LINE__, __func__);
 		return FALSE;
@@ -514,7 +527,7 @@ mobile_helper_get_secrets (NMDeviceModemCapabilities capabilities,
 	else {
 		g_set_error (error,
 		             NM_SECRET_AGENT_ERROR,
-		             NM_SECRET_AGENT_ERROR_INTERNAL_ERROR,
+		             NM_SECRET_AGENT_ERROR_FAILED,
 		             "%s.%d (%s): unknown modem capabilities (0x%X).",
 		             __FILE__, __LINE__, __func__, capabilities);
 		return FALSE;
@@ -528,7 +541,7 @@ mobile_helper_get_secrets (NMDeviceModemCapabilities capabilities,
 	else {
 		g_set_error (error,
 		             NM_SECRET_AGENT_ERROR,
-		             NM_SECRET_AGENT_ERROR_INTERNAL_ERROR,
+		             NM_SECRET_AGENT_ERROR_FAILED,
 		             "%s.%d (%s): unknown secrets hint '%s'.",
 		             __FILE__, __LINE__, __func__, info->secret_name);
 		return FALSE;
@@ -539,7 +552,7 @@ mobile_helper_get_secrets (NMDeviceModemCapabilities capabilities,
 	if (!widget || !secret_entry) {
 		g_set_error (error,
 		             NM_SECRET_AGENT_ERROR,
-		             NM_SECRET_AGENT_ERROR_INTERNAL_ERROR,
+		             NM_SECRET_AGENT_ERROR_FAILED,
 		             "%s.%d (%s): error asking for mobile secrets.",
 		             __FILE__, __LINE__, __func__);
 		return FALSE;
@@ -556,10 +569,12 @@ mobile_helper_get_secrets (NMDeviceModemCapabilities capabilities,
 
 /********************************************************************/
 
-GdkPixbuf *
+void
 mobile_helper_get_icon (NMDevice *device,
                         NMDeviceState state,
                         NMConnection *connection,
+                        GdkPixbuf **out_pixbuf,
+                        const char **out_icon_name,
                         char **tip,
                         NMApplet *applet,
                         guint32 mb_state,
@@ -568,8 +583,10 @@ mobile_helper_get_icon (NMDevice *device,
                         gboolean quality_valid)
 {
 	NMSettingConnection *s_con;
-	GdkPixbuf *pixbuf = NULL;
 	const char *id;
+
+	g_return_if_fail (out_icon_name && !*out_icon_name);
+	g_return_if_fail (tip && !*tip);
 
 	id = nm_device_get_iface (NM_DEVICE (device));
 	if (connection) {
@@ -591,11 +608,13 @@ mobile_helper_get_icon (NMDevice *device,
 		*tip = g_strdup_printf (_("Requesting a network address for '%s'..."), id);
 		break;
 	case NM_DEVICE_STATE_ACTIVATED:
-		pixbuf = mobile_helper_get_status_pixbuf (quality,
-		                                          quality_valid,
-		                                          mb_state,
-		                                          mb_tech,
-		                                          applet);
+		*out_pixbuf = mobile_helper_get_status_pixbuf (quality,
+		                                               quality_valid,
+		                                               mb_state,
+		                                               mb_tech,
+		                                               applet);
+		*out_icon_name = mobile_helper_get_quality_icon_name (quality_valid ?
+		                                                      quality : 0);
 
 		if ((mb_state != MB_STATE_UNKNOWN) && quality_valid) {
 			gboolean roaming = (mb_state == MB_STATE_ROAMING);
@@ -610,8 +629,6 @@ mobile_helper_get_icon (NMDevice *device,
 	default:
 		break;
 	}
-
-	return pixbuf;
 }
 
 /********************************************************************/

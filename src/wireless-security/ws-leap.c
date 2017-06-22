@@ -17,14 +17,16 @@
  * with this program; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
- * (C) Copyright 2007 - 2010 Red Hat, Inc.
+ * Copyright 2007 - 2014 Red Hat, Inc.
  */
 
+#include "nm-default.h"
+
 #include <string.h>
-#include <nm-setting-wireless.h>
 
 #include "wireless-security.h"
 #include "helpers.h"
+#include "nma-ui-utils.h"
 #include "utils.h"
 
 struct _WirelessSecurityLEAP {
@@ -47,24 +49,35 @@ show_toggled_cb (GtkCheckButton *button, WirelessSecurity *sec)
 }
 
 static gboolean
-validate (WirelessSecurity *parent, const GByteArray *ssid)
+validate (WirelessSecurity *parent, GError **error)
 {
 	GtkWidget *entry;
 	const char *text;
+	gboolean ret = TRUE;
 
 	entry = GTK_WIDGET (gtk_builder_get_object (parent->builder, "leap_username_entry"));
 	g_assert (entry);
 	text = gtk_entry_get_text (GTK_ENTRY (entry));
-	if (!text || !strlen (text))
-		return FALSE;
+	if (!text || !strlen (text)) {
+		widget_set_error (entry);
+		g_set_error_literal (error, NMA_ERROR, NMA_ERROR_GENERIC, _("missing leap-username"));
+		ret = FALSE;
+	} else
+		widget_unset_error (entry);
 
 	entry = GTK_WIDGET (gtk_builder_get_object (parent->builder, "leap_password_entry"));
 	g_assert (entry);
 	text = gtk_entry_get_text (GTK_ENTRY (entry));
-	if (!text || !strlen (text))
-		return FALSE;
+	if (!text || !strlen (text)) {
+		widget_set_error (entry);
+		if (ret) {
+			g_set_error_literal (error, NMA_ERROR, NMA_ERROR_GENERIC, _("missing leap-password"));
+			ret = FALSE;
+		}
+	} else
+		widget_unset_error (entry);
 
-	return TRUE;
+	return ret;
 }
 
 static void
@@ -88,15 +101,6 @@ fill_connection (WirelessSecurity *parent, NMConnection *connection)
 	GtkWidget *widget, *passwd_entry;
 	const char *leap_password = NULL, *leap_username = NULL;
 
-	/* Get LEAP_PASSWORD_FLAGS from the old security setting, if any, or
-	 * set the flags to NM_SETTING_SECRET_FLAG_AGENT_OWNED by default.
-	 */
-	s_wireless_sec = nm_connection_get_setting_wireless_security (connection);
-	if (s_wireless_sec)
-		secret_flags = nm_setting_wireless_security_get_leap_password_flags (s_wireless_sec);
-	else
-		secret_flags = NM_SETTING_SECRET_FLAG_AGENT_OWNED;
-
 	/* Blow away the old security setting by adding a clear one */
 	s_wireless_sec = (NMSettingWirelessSecurity *) nm_setting_wireless_security_new ();
 	nm_connection_add_setting (connection, (NMSetting *) s_wireless_sec);
@@ -115,9 +119,15 @@ fill_connection (WirelessSecurity *parent, NMConnection *connection)
 	              NM_SETTING_WIRELESS_SECURITY_LEAP_PASSWORD, leap_password,
 	              NULL);
 
+	/* Save LEAP_PASSWORD_FLAGS to the connection */
+	secret_flags = nma_utils_menu_to_secret_flags (passwd_entry);
+	nm_setting_set_secret_flags (NM_SETTING (s_wireless_sec), sec->password_flags_name,
+	                             secret_flags, NULL);
+
 	/* Update secret flags and popup when editing the connection */
 	if (sec->editing_connection)
-		utils_update_password_storage (NM_SETTING (s_wireless_sec), secret_flags, passwd_entry, sec->password_flags_name);
+		nma_utils_update_password_storage (passwd_entry, secret_flags,
+		                                   NM_SETTING (s_wireless_sec), sec->password_flags_name);
 }
 
 static void
@@ -163,6 +173,7 @@ ws_leap_new (NMConnection *connection, gboolean secrets_only)
 	}
 
 	parent->adhoc_compatible = FALSE;
+	parent->hotspot_compatible = FALSE;
 	sec = (WirelessSecurityLEAP *) parent;
 	sec->editing_connection = secrets_only ? FALSE : TRUE;
 	sec->password_flags_name = NM_SETTING_WIRELESS_SECURITY_LEAP_PASSWORD;
@@ -174,7 +185,8 @@ ws_leap_new (NMConnection *connection, gboolean secrets_only)
 	                  sec);
 
 	/* Create password-storage popup menu for password entry under entry's secondary icon */
-	utils_setup_password_storage (connection, NM_SETTING_WIRELESS_SECURITY_SETTING_NAME, widget, sec->password_flags_name);
+	nma_utils_setup_password_storage (widget, 0, (NMSetting *) wsec, sec->password_flags_name,
+	                                  FALSE, secrets_only);
 
 	if (wsec)
 		update_secrets (WIRELESS_SECURITY (sec), connection);
