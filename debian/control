@@ -23,7 +23,6 @@ Build-Depends: debhelper (>= 9),
                libjansson-dev (>= 2.3),
                iso-codes,
                libgirepository1.0-dev,
-               dh-translations,
                libappindicator3-dev,
                libdbusmenu-gtk3-dev (>= 16.04),
                gobject-introspection
