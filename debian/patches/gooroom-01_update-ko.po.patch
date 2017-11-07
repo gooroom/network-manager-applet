@@ -1,0 +1,124 @@
+diff --git a/po/ko.po b/po/ko.po
+index 7a41e40..5ca1775 100644
+--- a/po/ko.po
++++ b/po/ko.po
+@@ -23,7 +23,7 @@ msgstr ""
+ "Project-Id-Version: network-manager-applet\n"
+ "Report-Msgid-Bugs-To: \n"
+ "POT-Creation-Date: 2016-04-05 14:02+0200\n"
+-"PO-Revision-Date: 2014-09-06 18:12+0900\n"
++"PO-Revision-Date: 2017-11-07 16:44+0900\n"
+ "Last-Translator: Changwoo Ryu <cwryu@debian.org>\n"
+ "Language-Team: GNOME Korea <gnome-kr@googlegroups.com>\n"
+ "Language: ko\n"
+@@ -31,6 +31,7 @@ msgstr ""
+ "Content-Type: text/plain; charset=UTF-8\n"
+ "Content-Transfer-Encoding: 8bit\n"
+ "Plural-Forms: nplurals=1; plural=0;\n"
++"X-Generator: Poedit 1.8.11\n"
+ 
+ #: ../nm-applet.desktop.in.h:1 ../src/applet.c:3105
+ msgid "Network"
+@@ -141,12 +142,16 @@ msgid ""
+ "NetworkManager is a system service for managing and configuring your network "
+ "connections and devices."
+ msgstr ""
++"네트워크 관리는 네트워크 연결 및 장치를 관리하고 구성하기위한 시스템 서비스입"
++"니다."
+ 
+ #: ../org.gnome.nm-connection-editor.appdata.xml.in.h:4
+ msgid ""
+ "The nm-connection-editor program works with NetworkManager to create and "
+ "edit existing connection profiles for NetworkManager."
+ msgstr ""
++"nm-connection-editor 프로그램은 네트워크 관리와 함께 작동하여 네트워크 관리"
++"의 기존 연결 프로필을 만들고 편집합니다."
+ 
+ #: ../src/8021x.ui.h:1 ../src/ethernet-dialog.c:99
+ msgid "802.1X authentication"
+@@ -160,7 +165,7 @@ msgstr "802.1X 인증"
+ #: ../src/connection-editor/nm-connection-editor.ui.h:6
+ #: ../src/gsm-unlock.ui.h:1
+ msgid "_Cancel"
+-msgstr ""
++msgstr "취소(_C)"
+ 
+ #: ../src/8021x.ui.h:3
+ msgid "C_onnect"
+@@ -1012,7 +1017,7 @@ msgstr "PIN/PUK 코드 표시"
+ #: ../src/connection-editor/ce-page-dcb.ui.h:26
+ #: ../src/connection-editor/ce-ppp-auth-methods.ui.h:2
+ msgid "_OK"
+-msgstr ""
++msgstr "확인(_O)"
+ 
+ #: ../src/connection-editor/ce-ip4-routes.ui.h:3
+ #: ../src/connection-editor/ce-ip6-routes.ui.h:3
+@@ -1034,7 +1039,7 @@ msgstr ""
+ #: ../src/connection-editor/ce-page-team.ui.h:4
+ #: ../src/connection-editor/nm-connection-editor.ui.h:3
+ msgid "_Add"
+-msgstr ""
++msgstr "추가(_A)"
+ 
+ #. Delete
+ #: ../src/connection-editor/ce-ip4-routes.ui.h:5
+@@ -1274,7 +1279,7 @@ msgstr "기본"
+ 
+ #: ../src/connection-editor/ce-page.c:132
+ msgid "unspecified error"
+-msgstr ""
++msgstr "지정되지 않은 오류"
+ 
+ #: ../src/connection-editor/ce-page.c:245
+ #, fuzzy
+@@ -1308,9 +1313,8 @@ msgid "invalid interface-name (%s)"
+ msgstr ""
+ 
+ #: ../src/connection-editor/ce-page.c:485
+-#, fuzzy
+ msgid "device"
+-msgstr "모든 장치"
++msgstr "장치"
+ 
+ #: ../src/connection-editor/ce-page.c:591
+ msgid "Failed to update connection secrets due to an unknown error."
+@@ -2279,7 +2283,7 @@ msgstr "연결을 추가하는 데 실패했습니다"
+ 
+ #: ../src/connection-editor/nm-connection-editor.ui.h:2 ../src/info.ui.h:2
+ msgid "_Close"
+-msgstr ""
++msgstr "닫기(_C)"
+ 
+ #: ../src/connection-editor/nm-connection-editor.ui.h:4
+ msgid "Connection _name:"
+@@ -2915,9 +2919,8 @@ msgid "bssid"
+ msgstr ""
+ 
+ #: ../src/connection-editor/page-wifi.c:577
+-#, fuzzy
+ msgid "Wi-Fi device"
+-msgstr "모든 장치"
++msgstr "Wi-Fi 장치"
+ 
+ #: ../src/connection-editor/page-wifi.c:619
+ #, c-format
+@@ -3253,7 +3256,6 @@ msgid "Store the password only for this user"
+ msgstr "이 사용자에 대해서만 암호 저장(_U)"
+ 
+ #: ../src/libnma/nma-ui-utils.c:50 ../src/libnm-gtk/nm-ui-utils.c:616
+-#, fuzzy
+ msgid "Store the password for all users"
+ msgstr "모든 사용자에 대해 암호 저장(_A)"
+ 
+@@ -3263,9 +3265,8 @@ msgid "Ask for this password every time"
+ msgstr "접속할 때마다 암호 물어보기(_K)"
+ 
+ #: ../src/libnma/nma-ui-utils.c:52 ../src/libnm-gtk/nm-ui-utils.c:618
+-#, fuzzy
+ msgid "The password is not required"
+-msgstr "'%s'에 연결하려면 암호가 필요합니다."
++msgstr "암호는 필요하지 않습니다."
+ 
+ #: ../src/libnma/nma-vpn-password-dialog.c:99
+ #: ../src/libnm-gtk/nm-vpn-password-dialog.c:99
