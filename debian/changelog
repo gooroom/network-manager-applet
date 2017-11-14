@@ -1,3 +1,18 @@
+network-manager-applet (1.4.2-1ubuntu5+grm1u1) artful; urgency=medium
+
+  [ jongkyung.woo ]
+  * [738c6a08] Imported Gooroom Beta Patchset
+  * [ed3dc056] Imported Gooroom Patchset
+  * [e9b482c2] Removed dh-translations in Build-Depends
+
+  [ sungho.kang ]
+  * [9f8c314d] Added ko.po patchset
+  * [f86c9964] Updated ko.po.patch
+
+  [ Gooroom Autobuilder ]
+
+ -- Gooroom Autobuilder <jenkins@gooroom.kr>  Tue, 14 Nov 2017 12:57:56 +0900
+
 network-manager-applet (1.4.2-1ubuntu5) artful; urgency=medium
 
   * debian/patches/git_fix_wrong_status_for_wireless_toggle.patch
