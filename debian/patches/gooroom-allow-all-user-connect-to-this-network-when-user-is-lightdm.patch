@@ -1,0 +1,26 @@
+diff --git a/src/connection-editor/page-general.c b/src/connection-editor/page-general.c
+index 3b8b002..abe40c8 100644
+--- a/src/connection-editor/page-general.c
++++ b/src/connection-editor/page-general.c
+@@ -293,10 +293,17 @@ populate_ui (CEPageGeneral *self)
+ 	if (priv->is_vpn)
+ 		gtk_widget_hide (priv->autoconnect);
+ 
+-	/* 'All users may connect to this network' checkbox */
+-	if (nm_setting_connection_get_num_permissions (priv->setting))
+-		global_connection = FALSE;
+-	gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (priv->all_checkbutton), global_connection);
++	if (g_strcmp0 (g_get_user_name (), "lightdm") == 0) {
++		g_object_set (G_OBJECT (priv->setting), NM_SETTING_CONNECTION_PERMISSIONS, NULL, NULL);
++		gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (priv->all_checkbutton), TRUE);
++		gtk_widget_set_sensitive (priv->all_checkbutton, FALSE);
++	} else {
++		/* 'All users may connect to this network' checkbox */
++		if (nm_setting_connection_get_num_permissions (priv->setting))
++			global_connection = FALSE;
++
++		gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (priv->all_checkbutton), global_connection);
++	}
+ 
+ 	stuff_changed (NULL, self);
+ }

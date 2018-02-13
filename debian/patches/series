@@ -17,3 +17,4 @@ applet-Check-the-user-has-permission-to-modify-befor.patch
 git_fix_libnma_pygobject_symbols.patch
 git_fix_wrong_status_for_wireless_toggle.patch
 gooroom-01_update-ko.po.patch
+gooroom-allow-all-user-connect-to-this-network-when-user-is-lightdm.patch
