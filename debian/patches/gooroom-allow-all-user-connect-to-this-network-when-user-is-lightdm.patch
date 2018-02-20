@@ -24,3 +24,35 @@ index 3b8b002..abe40c8 100644
  
  	stuff_changed (NULL, self);
  }
+diff --git a/src/applet-device-wifi.c b/src/applet-device-wifi.c
+index 78f3a71..ba37a44 100644
+--- a/src/applet-device-wifi.c
++++ b/src/applet-device-wifi.c
+@@ -590,10 +590,12 @@ _do_new_auto_connection (NMApplet *applet,
+ 
+ 	connection = nm_simple_connection_new ();
+ 
+-	/* Make the new connection available only for the current user */
+-	s_con = (NMSettingConnection *) nm_setting_connection_new ();
+-	nm_setting_connection_add_permission (s_con, "user", g_get_user_name (), NULL);
+-	nm_connection_add_setting (connection, NM_SETTING (s_con));
++	if (g_strcmp0 (g_get_user_name(), "lightdm") != 0) {
++		/* Make the new connection available only for the current user */
++		s_con = (NMSettingConnection *) nm_setting_connection_new ();
++		nm_setting_connection_add_permission (s_con, "user", g_get_user_name (), NULL);
++		nm_connection_add_setting (connection, NM_SETTING (s_con));
++	}
+ 
+ 	ssid = nm_access_point_get_ssid (ap);
+ 	if (   (nm_access_point_get_mode (ap) == NM_802_11_MODE_INFRA)
+@@ -644,7 +646,9 @@ _do_new_auto_connection (NMApplet *applet,
+ 			s_con = (NMSettingConnection *) nm_setting_connection_new ();
+ 			nm_connection_add_setting (connection, NM_SETTING (s_con));
+ 		}
+-		nm_setting_connection_add_permission (s_con, "user", g_get_user_name (), NULL);
++		if (g_strcmp0 (g_get_user_name(), "lightdm") != 0) {
++			nm_setting_connection_add_permission (s_con, "user", g_get_user_name (), NULL);
++		}
+ 
+ 		if ((rsn_flags & NM_802_11_AP_SEC_KEY_MGMT_PSK) ||
+ 		    (wpa_flags & NM_802_11_AP_SEC_KEY_MGMT_PSK)) {
