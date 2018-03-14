@@ -1,3 +1,15 @@
+network-manager-applet (1.4.2-1ubuntu5+grm1u2) artful; urgency=medium
+
+  [ cjheo ]
+  * [bac399d4] Adding the patch to set the "Allow all users to connect to this network" option to be selected by default when the user is lightdm
+
+  [ jongkyung.woo ]
+  * [19a05b66] Modified to be accessiable to all users when connecting directly to the AP
+
+  [ Gooroom Autobuilder ]
+
+ -- Gooroom Autobuilder <jenkins@gooroom.kr>  Wed, 14 Mar 2018 18:06:17 +0900
+
 network-manager-applet (1.4.2-1ubuntu5+grm1u1) artful; urgency=medium
 
   [ jongkyung.woo ]
