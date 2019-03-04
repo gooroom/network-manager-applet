@@ -134,17 +134,20 @@ __g_type_ensure (GType type)
 
 /* Rumtime check for glib version. First do a compile time check which
  * (if satisfied) shortcuts the runtime check. */
-#define nm_glib_check_version(major, minor, micro) \
-    (   GLIB_CHECK_VERSION ((major), (minor), (micro)) \
-     || (   (   glib_major_version > (major)) \
-         || (   glib_major_version == (major) \
-             && glib_minor_version > (minor)) \
-         || (   glib_major_version == (major) \
-             && glib_minor_version == (minor) \
-             && glib_micro_version >= (micro))))
+static inline gboolean
+nm_glib_check_version (guint major, guint minor, guint micro)
+{
+	return    GLIB_CHECK_VERSION (major, minor, micro)
+	       || (   (   glib_major_version > major)
+	           || (   glib_major_version == major
+	               && glib_minor_version > minor)
+	           || (   glib_major_version == major
+	               && glib_minor_version == minor
+	               && glib_micro_version < micro));
+}
 
 /* g_test_skip() is only available since glib 2.38. Add a compatibility wrapper. */
-inline static void
+static inline void
 __nmtst_g_test_skip (const gchar *msg)
 {
 #if GLIB_CHECK_VERSION (2, 38, 0)
@@ -159,7 +162,7 @@ __nmtst_g_test_skip (const gchar *msg)
 
 
 /* g_test_add_data_func_full() is only available since glib 2.34. Add a compatibility wrapper. */
-inline static void
+static inline void
 __g_test_add_data_func_full (const char     *testpath,
                              gpointer        test_data,
                              GTestDataFunc   test_func,
@@ -275,7 +278,7 @@ _nm_g_ptr_array_insert (GPtrArray *array,
 
 
 #if !GLIB_CHECK_VERSION (2, 40, 0)
-inline static gboolean
+static inline gboolean
 _g_key_file_save_to_file (GKeyFile     *key_file,
                           const gchar  *filename,
                           GError      **error)
@@ -313,14 +316,14 @@ _g_key_file_save_to_file (GKeyFile     *key_file,
 
 #if GLIB_CHECK_VERSION (2, 36, 0)
 #define g_credentials_get_unix_pid(creds, error) \
-	G_GNUC_EXTENSION ({ \
+	({ \
 		G_GNUC_BEGIN_IGNORE_DEPRECATIONS \
 			(g_credentials_get_unix_pid) ((creds), (error)); \
 		G_GNUC_END_IGNORE_DEPRECATIONS \
 	})
 #else
 #define g_credentials_get_unix_pid(creds, error) \
-	G_GNUC_EXTENSION ({ \
+	({ \
 		struct ucred *native_creds; \
 		 \
 		native_creds = g_credentials_get_native ((creds), G_CREDENTIALS_TYPE_LINUX_UCRED); \
@@ -357,12 +360,12 @@ _nm_g_hash_table_get_keys_as_array (GHashTable *hash_table,
 #endif
 #if !GLIB_CHECK_VERSION(2, 40, 0)
 #define g_hash_table_get_keys_as_array(hash_table, length) \
-	G_GNUC_EXTENSION ({ \
+	({ \
 		_nm_g_hash_table_get_keys_as_array (hash_table, length); \
 	})
 #else
 #define g_hash_table_get_keys_as_array(hash_table, length) \
-	G_GNUC_EXTENSION ({ \
+	({ \
 		G_GNUC_BEGIN_IGNORE_DEPRECATIONS \
 			(g_hash_table_get_keys_as_array) ((hash_table), (length)); \
 		G_GNUC_END_IGNORE_DEPRECATIONS \
@@ -392,6 +395,95 @@ g_steal_pointer (gpointer pp)
 /* type safety */
 #define g_steal_pointer(pp) \
   (0 ? (*(pp)) : (g_steal_pointer) (pp))
+#endif
+
+
+static inline gboolean
+_nm_g_strv_contains (const gchar * const *strv,
+                     const gchar         *str)
+{
+#if !GLIB_CHECK_VERSION(2, 44, 0)
+	g_return_val_if_fail (strv != NULL, FALSE);
+	g_return_val_if_fail (str != NULL, FALSE);
+
+	for (; *strv != NULL; strv++) {
+		if (g_str_equal (str, *strv))
+			return TRUE;
+	}
+
+	return FALSE;
+#else
+	G_GNUC_BEGIN_IGNORE_DEPRECATIONS
+	return g_strv_contains (strv, str);
+	G_GNUC_END_IGNORE_DEPRECATIONS
+#endif
+}
+#define g_strv_contains _nm_g_strv_contains
+
+static inline GVariant *
+_nm_g_variant_new_take_string (gchar *string)
+{
+#if !GLIB_CHECK_VERSION(2, 36, 0)
+	GVariant *value;
+
+	g_return_val_if_fail (string != NULL, NULL);
+	g_return_val_if_fail (g_utf8_validate (string, -1, NULL), NULL);
+
+	value = g_variant_new_string (string);
+	g_free (string);
+	return value;
+#elif !GLIB_CHECK_VERSION(2, 38, 0)
+	GVariant *value;
+	GBytes *bytes;
+
+	g_return_val_if_fail (string != NULL, NULL);
+	g_return_val_if_fail (g_utf8_validate (string, -1, NULL), NULL);
+
+	bytes = g_bytes_new_take (string, strlen (string) + 1);
+	value = g_variant_new_from_bytes (G_VARIANT_TYPE_STRING, bytes, TRUE);
+	g_bytes_unref (bytes);
+
+	return value;
+#else
+	G_GNUC_BEGIN_IGNORE_DEPRECATIONS
+	return g_variant_new_take_string (string);
+	G_GNUC_END_IGNORE_DEPRECATIONS
+#endif
+}
+#define g_variant_new_take_string _nm_g_variant_new_take_string
+
+#if !GLIB_CHECK_VERSION(2, 38, 0)
+_nm_printf (1, 2)
+static inline GVariant *
+_nm_g_variant_new_printf (const char *format_string, ...)
+{
+	char *string;
+	va_list ap;
+
+	g_return_val_if_fail (format_string, NULL);
+
+	va_start (ap, format_string);
+	string = g_strdup_vprintf (format_string, ap);
+	va_end (ap);
+
+	return g_variant_new_take_string (string);
+}
+#define g_variant_new_printf(...) _nm_g_variant_new_printf(__VA_ARGS__)
+#else
+#define g_variant_new_printf(...) \
+	({ \
+		GVariant *_v; \
+		\
+		G_GNUC_BEGIN_IGNORE_DEPRECATIONS \
+		_v = g_variant_new_printf (__VA_ARGS__); \
+		G_GNUC_END_IGNORE_DEPRECATIONS \
+		_v; \
+	})
+#endif
+
+#if !GLIB_CHECK_VERSION (2, 56, 0)
+#define g_object_ref(Obj)      ((typeof(Obj)) g_object_ref (Obj))
+#define g_object_ref_sink(Obj) ((typeof(Obj)) g_object_ref_sink (Obj))
 #endif
 
 #endif  /* __NM_GLIB_H__ */

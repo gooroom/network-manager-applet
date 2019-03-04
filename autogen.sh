@@ -14,11 +14,12 @@ PKG_NAME=nm-applet
 }
 
 (cd $srcdir;
+    gtkdocize &&
     autoreconf --install --symlink &&
     intltoolize --force &&
     autoreconf
 )
 
 if test -z "$NOCONFIGURE"; then
-    "$srcdir/configure" --enable-maintainer-mode "$@"
+    "$srcdir/configure" --enable-maintainer-mode --enable-more-warnings=error "$@"
 fi

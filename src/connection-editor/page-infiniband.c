@@ -56,8 +56,8 @@ infiniband_private_init (CEPageInfiniband *self)
 	gtk_widget_set_tooltip_text (GTK_WIDGET (priv->device_combo),
 	                             _("This option locks this connection to the network device specified "
 	                               "either by its interface name or permanent MAC or both. Examples: "
-	                               "\"ib0\", \"80:00:00:48:fe:80:00:00:00:00:00:00:00:02:c9:03:00:00:0f:65\", "
-	                               "\"ib0 (80:00:00:48:fe:80:00:00:00:00:00:00:00:02:c9:03:00:00:0f:65)\""));
+	                               "“ib0”, “80:00:00:48:fe:80:00:00:00:00:00:00:00:02:c9:03:00:00:0f:65”, "
+	                               "“ib0 (80:00:00:48:fe:80:00:00:00:00:00:00:00:02:c9:03:00:00:0f:65)”"));
 
 	vbox = GTK_WIDGET (gtk_builder_get_object (builder, "infiniband_device_vbox"));
 	gtk_container_add (GTK_CONTAINER (vbox), GTK_WIDGET (priv->device_combo));
@@ -103,7 +103,7 @@ populate_ui (CEPageInfiniband *self)
 	s_mac = nm_setting_infiniband_get_mac_address (setting);
 	ce_page_setup_device_combo (CE_PAGE (self), GTK_COMBO_BOX (priv->device_combo),
 	                            NM_TYPE_DEVICE_INFINIBAND, s_ifname,
-	                            s_mac, NM_DEVICE_INFINIBAND_HW_ADDRESS, TRUE);
+	                            s_mac, NM_DEVICE_INFINIBAND_HW_ADDRESS);
 	g_signal_connect (priv->device_combo, "changed", G_CALLBACK (stuff_changed), self);
 
 	/* MTU */
@@ -114,12 +114,9 @@ populate_ui (CEPageInfiniband *self)
 }
 
 static void
-finish_setup (CEPageInfiniband *self, gpointer unused, GError *error, gpointer user_data)
+finish_setup (CEPageInfiniband *self, gpointer user_data)
 {
 	CEPageInfinibandPrivate *priv = CE_PAGE_INFINIBAND_GET_PRIVATE (self);
-
-	if (error)
-		return;
 
 	populate_ui (self);
 
@@ -143,7 +140,7 @@ ce_page_infiniband_new (NMConnectionEditor *editor,
 	                                        connection,
 	                                        parent_window,
 	                                        client,
-	                                        UIDIR "/ce-page-infiniband.ui",
+	                                        "/org/gnome/nm_connection_editor/ce-page-infiniband.ui",
 	                                        "InfinibandPage",
 	                                        _("InfiniBand")));
 	if (!self) {
@@ -161,7 +158,7 @@ ce_page_infiniband_new (NMConnectionEditor *editor,
 		nm_connection_add_setting (connection, NM_SETTING (priv->setting));
 	}
 
-	g_signal_connect (self, "initialized", G_CALLBACK (finish_setup), NULL);
+	g_signal_connect (self, CE_PAGE_INITIALIZED, G_CALLBACK (finish_setup), NULL);
 
 	return CE_PAGE (self);
 }
@@ -238,22 +235,24 @@ ce_page_infiniband_class_init (CEPageInfinibandClass *infiniband_class)
 
 
 void
-infiniband_connection_new (GtkWindow *parent,
+infiniband_connection_new (FUNC_TAG_PAGE_NEW_CONNECTION_IMPL,
+                           GtkWindow *parent,
                            const char *detail,
                            gpointer detail_data,
+                           NMConnection *connection,
                            NMClient *client,
                            PageNewConnectionResultFunc result_func,
                            gpointer user_data)
 {
-	NMConnection *connection;
+	gs_unref_object NMConnection *connection_tmp = NULL;
 
-	connection = ce_page_new_connection (_("InfiniBand connection %d"),
-	                                     NM_SETTING_INFINIBAND_SETTING_NAME,
-	                                     TRUE,
-	                                     client,
-	                                     user_data);
+	connection = _ensure_connection_other (connection, &connection_tmp);
+	ce_page_complete_connection (connection,
+	                             _("InfiniBand connection %d"),
+	                             NM_SETTING_INFINIBAND_SETTING_NAME,
+	                             TRUE,
+	                             client);
 	nm_connection_add_setting (connection, nm_setting_infiniband_new ());
 
-	(*result_func) (connection, FALSE, NULL, user_data);
+	(*result_func) (FUNC_TAG_PAGE_NEW_CONNECTION_RESULT_CALL, connection, FALSE, NULL, user_data);
 }
-

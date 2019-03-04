@@ -30,6 +30,8 @@
 #include "mobile-helpers.h"
 #include "mb-menu-item.h"
 
+#define BROADBAND_INFO_TAG "devinfo"
+
 typedef struct {
 	NMApplet *applet;
 	NMDevice *device;
@@ -249,7 +251,7 @@ unlock_dialog_response (GtkDialog *dialog,
 	g_assert (lock == MM_MODEM_LOCK_SIM_PIN || lock == MM_MODEM_LOCK_SIM_PUK);
 
 	/* Start the spinner to show the progress of the unlock */
-	applet_mobile_pin_dialog_start_spinner (info->dialog, _("Sending unlock code..."));
+	applet_mobile_pin_dialog_start_spinner (info->dialog, _("Sending unlock code…"));
 
 	code1 = applet_mobile_pin_dialog_get_entry1 (info->dialog);
 	if (!code1 || !strlen (code1)) {
@@ -470,7 +472,7 @@ get_secrets (SecretsRequest *req,
 	                                error))
 		return FALSE;
 
-	devinfo = g_object_get_data (G_OBJECT (device), "devinfo");
+	devinfo = g_object_get_data (G_OBJECT (device), BROADBAND_INFO_TAG);
 	if (!devinfo) {
 		g_set_error (error,
 		             NM_SECRET_AGENT_ERROR,
@@ -637,7 +639,7 @@ get_icon (NMDevice *device,
 		return;
 	}
 
-	info = g_object_get_data (G_OBJECT (device), "devinfo");
+	info = g_object_get_data (G_OBJECT (device), BROADBAND_INFO_TAG);
 	if (!info) {
 		g_warning ("ModemManager is not available for modem at %s",
 		           nm_device_get_udi (device));
@@ -666,8 +668,10 @@ typedef struct {
 } BroadbandMenuItemInfo;
 
 static void
-menu_item_info_destroy (BroadbandMenuItemInfo *info)
+menu_item_info_destroy (gpointer data, GClosure *closure)
 {
+	BroadbandMenuItemInfo *info = data;
+
 	g_object_unref (G_OBJECT (info->device));
 	if (info->connection)
 		g_object_unref (info->connection);
@@ -696,7 +700,7 @@ add_connection_item (NMDevice *device,
 
 	info = g_slice_new0 (BroadbandMenuItemInfo);
 	info->applet = applet;
-	info->device = g_object_ref (G_OBJECT (device));
+	info->device = g_object_ref (device);
 	info->connection = connection ? g_object_ref (connection) : NULL;
 
 	g_signal_connect_data (item, "activate",
@@ -705,6 +709,7 @@ add_connection_item (NMDevice *device,
 	                       (GClosureNotify) menu_item_info_destroy, 0);
 
 	gtk_menu_shell_append (GTK_MENU_SHELL (menu), item);
+	gtk_widget_show (item);
 }
 
 static void
@@ -720,7 +725,7 @@ add_menu_item (NMDevice *device,
 	GtkWidget *item;
 	int i;
 
-	info = g_object_get_data (G_OBJECT (device), "devinfo");
+	info = g_object_get_data (G_OBJECT (device), BROADBAND_INFO_TAG);
 	if (!info) {
 		g_warning ("ModemManager is not available for modem at %s",
 		           nm_device_get_udi (device));
@@ -780,6 +785,7 @@ add_menu_item (NMDevice *device,
 		                            applet);
 		gtk_widget_set_sensitive (GTK_WIDGET (item), FALSE);
 		gtk_menu_shell_append (GTK_MENU_SHELL (menu), item);
+		gtk_widget_show (item);
 	}
 
 	/* Add the default / inactive connection items */
@@ -798,7 +804,7 @@ add_menu_item (NMDevice *device,
 			}
 		} else {
 			/* Default connection item */
-			item = gtk_check_menu_item_new_with_label (_("New Mobile Broadband connection..."));
+			item = gtk_check_menu_item_new_with_label (_("New Mobile Broadband connection…"));
 			add_connection_item (device, NULL, item, menu, applet);
 		}
 	}
@@ -1007,7 +1013,10 @@ device_added (NMDevice *device,
 	if (!udi)
 		return;
 
-	if (!applet->mm1) {
+	if (g_object_get_data (G_OBJECT (modem), BROADBAND_INFO_TAG))
+		return;
+
+	if (!applet->mm1_running) {
 		g_warning ("Cannot grab information for modem at %s: No ModemManager support",
 		           nm_device_get_udi (device));
 		return;
@@ -1057,7 +1066,7 @@ device_added (NMDevice *device,
 
 	/* Store device info */
 	g_object_set_data_full (G_OBJECT (modem),
-	                        "devinfo",
+	                        BROADBAND_INFO_TAG,
 	                        info,
 	                        (GDestroyNotify)broadband_device_info_free);
 }

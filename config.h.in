@@ -9,6 +9,14 @@
 /* Define to 1 if you have the `bind_textdomain_codeset' function. */
 #undef HAVE_BIND_TEXTDOMAIN_CODESET
 
+/* Define to 1 if you have the Mac OS X function CFLocaleCopyCurrent in the
+   CoreFoundation framework. */
+#undef HAVE_CFLOCALECOPYCURRENT
+
+/* Define to 1 if you have the Mac OS X function CFPreferencesCopyAppValue in
+   the CoreFoundation framework. */
+#undef HAVE_CFPREFERENCESCOPYAPPVALUE
+
 /* Define to 1 if you have the `dcgettext' function. */
 #undef HAVE_DCGETTEXT
 
@@ -60,6 +68,9 @@
 /* Define to the sub-directory where libtool stores uninstalled libraries. */
 #undef LT_OBJDIR
 
+/* Mobile Broadband Service Provider Information Database location */
+#undef MOBILE_BROADBAND_PROVIDER_INFO_DATABASE
+
 /* git commit id of the original source code version */
 #undef NMA_GIT_SHA
 
@@ -90,6 +101,9 @@
 /* Define to 1 if you have the ANSI C header files. */
 #undef STDC_HEADERS
 
+/* Explicitly enforce Ayatana AppIndicator */
+#undef USE_AYATANA_INDICATORS
+
 /* Enable extensions on AIX 3, Interix.  */
 #ifndef _ALL_SOURCE
 # undef _ALL_SOURCE
@@ -115,11 +129,17 @@
 /* Version number of package */
 #undef VERSION
 
-/* Enable using libappindicator */
+/* Enable AppIndicator support and use Ubuntu AppIndicator */
 #undef WITH_APPINDICATOR
+
+/* Define if Gcr is available */
+#undef WITH_GCR
 
 /* Define if Jansson is available */
 #undef WITH_JANSSON
+
+/* Define if libselinux is available */
+#undef WITH_SELINUX
 
 /* Define if you have ModemManager/WWAN support */
 #undef WITH_WWAN

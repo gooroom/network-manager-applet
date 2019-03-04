@@ -17,14 +17,13 @@
  * with this program; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
- * Copyright 2010 - 2014 Red Hat, Inc.
+ * Copyright 2010 - 2017 Red Hat, Inc.
  */
 
 #include "nm-default.h"
 
 #include <ctype.h>
 
-#define SECRET_API_SUBJECT_TO_CHANGE
 #include <libsecret/secret.h>
 
 #include "utils.h"
@@ -266,7 +265,7 @@ mobile_helper_wizard (NMDeviceModemCapabilities capabilities,
 	                                NULL,
 	                                wizard_capability,
 	                                FALSE,
-									mobile_wizard_done,
+	                                mobile_wizard_done,
 	                                info);
 	if (wizard) {
 		nma_mobile_wizard_present (wizard);
@@ -328,7 +327,7 @@ mobile_helper_save_pin_in_keyring (const char *devid,
 	char *name;
 	char *error_msg;
 
-	name = g_strdup_printf (_("PIN code for SIM card '%s' on '%s'"),
+	name = g_strdup_printf (_("PIN code for SIM card “%s” on “%s”"),
 	                        simid ? simid : "unknown",
 	                        devid);
 
@@ -463,8 +462,8 @@ ask_for_pin (GtkEntry **out_secret_entry)
 	gtk_window_set_modal (GTK_WINDOW (dialog), TRUE);
 	gtk_window_set_title (GTK_WINDOW (dialog), _("PIN code required"));
 
-	gtk_dialog_add_button (dialog, GTK_STOCK_CANCEL, GTK_RESPONSE_REJECT);
-	ok_button = gtk_dialog_add_button (dialog, GTK_STOCK_OK, GTK_RESPONSE_OK);
+	gtk_dialog_add_button (dialog, _("_Cancel"), GTK_RESPONSE_REJECT);
+	ok_button = gtk_dialog_add_button (dialog, _("_OK"), GTK_RESPONSE_OK);
 	gtk_window_set_default (GTK_WINDOW (dialog), ok_button);
 
 	vbox = GTK_BOX (gtk_dialog_get_content_area (dialog));
@@ -596,16 +595,16 @@ mobile_helper_get_icon (NMDevice *device,
 
 	switch (state) {
 	case NM_DEVICE_STATE_PREPARE:
-		*tip = g_strdup_printf (_("Preparing mobile broadband connection '%s'..."), id);
+		*tip = g_strdup_printf (_("Preparing mobile broadband connection “%s”…"), id);
 		break;
 	case NM_DEVICE_STATE_CONFIG:
-		*tip = g_strdup_printf (_("Configuring mobile broadband connection '%s'..."), id);
+		*tip = g_strdup_printf (_("Configuring mobile broadband connection “%s”…"), id);
 		break;
 	case NM_DEVICE_STATE_NEED_AUTH:
-		*tip = g_strdup_printf (_("User authentication required for mobile broadband connection '%s'..."), id);
+		*tip = g_strdup_printf (_("User authentication required for mobile broadband connection “%s”…"), id);
 		break;
 	case NM_DEVICE_STATE_IP_CONFIG:
-		*tip = g_strdup_printf (_("Requesting a network address for '%s'..."), id);
+		*tip = g_strdup_printf (_("Requesting a network address for “%s”…"), id);
 		break;
 	case NM_DEVICE_STATE_ACTIVATED:
 		*out_pixbuf = mobile_helper_get_status_pixbuf (quality,
@@ -619,12 +618,12 @@ mobile_helper_get_icon (NMDevice *device,
 		if ((mb_state != MB_STATE_UNKNOWN) && quality_valid) {
 			gboolean roaming = (mb_state == MB_STATE_ROAMING);
 
-			*tip = g_strdup_printf (_("Mobile broadband connection '%s' active: (%d%%%s%s)"),
+			*tip = g_strdup_printf (_("Mobile broadband connection “%s” active: (%d%%%s%s)"),
 			                        id, quality,
 			                        roaming ? ", " : "",
 			                        roaming ? _("roaming") : "");
 		} else
-			*tip = g_strdup_printf (_("Mobile broadband connection '%s' active"), id);
+			*tip = g_strdup_printf (_("Mobile broadband connection “%s” active"), id);
 		break;
 	default:
 		break;

@@ -17,7 +17,7 @@
  * with this program; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
- * Copyright 2008 - 2014 Red Hat, Inc.
+ * Copyright 2008 - 2017 Red Hat, Inc.
  */
 
 #include "nm-default.h"
@@ -39,6 +39,7 @@ info_dialog_show_error (const char *err)
 
 	dialog = gtk_message_dialog_new_with_markup (NULL, 0, GTK_MESSAGE_ERROR, GTK_BUTTONS_OK,
 			"<span weight=\"bold\" size=\"larger\">%s</span>\n\n%s", _("Error displaying connection information:"), err);
+	gtk_window_set_position (GTK_WINDOW (dialog), GTK_WIN_POS_CENTER_ALWAYS);
 	gtk_window_present (GTK_WINDOW (dialog));
 	g_signal_connect_swapped (dialog, "response", G_CALLBACK (gtk_widget_destroy), dialog);
 }
@@ -973,6 +974,7 @@ applet_info_dialog_show (NMApplet *applet)
 	g_signal_connect (dialog, "delete-event", G_CALLBACK (gtk_widget_hide_on_delete), dialog);
 	g_signal_connect_swapped (dialog, "response", G_CALLBACK (gtk_widget_hide), dialog);
 	gtk_widget_realize (dialog);
+	gtk_window_set_position (GTK_WINDOW(dialog), GTK_WIN_POS_CENTER_ALWAYS);
 	gtk_window_present_with_time (GTK_WINDOW (dialog),
 		gdk_x11_get_server_time (gtk_widget_get_window (dialog)));
 }
@@ -980,15 +982,38 @@ applet_info_dialog_show (NMApplet *applet)
 void
 applet_about_dialog_show (NMApplet *applet)
 {
+	const char *authors[] = {
+		"Michael Biebl <biebl@debian.org>",
+		"Matthias Clasen <mclasen@redhat.com>",
+		"Piotr Drąg <piotrdrag@gmail.com>",
+		"Pavel Šimerda <psimerda@redhat.com>",
+		"Alexander Sack <asac@ubuntu.com>",
+		"Aleksander Morgado <aleksander@lanedo.com>",
+		"Christian Persch <chpe@gnome.org>",
+		"Tambet Ingo <tambet@gmail.com>",
+		"Beniamino Galvani <bgalvani@redhat.com>",
+		"Lubomir Rintel <lkundrak@v3.sk>",
+		"Dan Winship <danw@gnome.org>",
+		"Dan Williams <dcbw@src.gnome.org>",
+		"Thomas Haller <thaller@redhat.com>",
+		"Jiří Klimeš <jklimes@redhat.com>",
+		"Dan Williams <dcbw@redhat.com>",
+		NULL
+	};
+
+
 	gtk_show_about_dialog (NULL,
 	                       "version", VERSION,
-	                       "copyright", _("Copyright \xc2\xa9 2004-2014 Red Hat, Inc.\n"
+	                       "copyright", _("Copyright \xc2\xa9 2004-2017 Red Hat, Inc.\n"
 	                                      "Copyright \xc2\xa9 2005-2008 Novell, Inc.\n"
 	                                      "and many other community contributors and translators"),
 	                       "comments", _("Notification area applet for managing your network devices and connections."),
 	                       "website", "http://www.gnome.org/projects/NetworkManager/",
 	                       "website-label", _("NetworkManager Website"),
-	                       "logo-icon-name", GTK_STOCK_NETWORK,
+	                       "logo-icon-name", "network-workgroup",
+	                       "license-type", GTK_LICENSE_GPL_2_0,
+	                       "authors", authors,
+	                       "translator-credits", _("translator-credits"),
 	                       NULL);
 }
 
@@ -1002,7 +1027,7 @@ applet_missing_ui_warning_dialog_show (void)
 
 	/* Bash focus-stealing prevention in the face */
 	gtk_window_set_position (GTK_WINDOW (dialog), GTK_WIN_POS_CENTER_ALWAYS);
-	gtk_window_set_default_icon_name (GTK_STOCK_DIALOG_ERROR);
+	gtk_window_set_icon_name (GTK_WINDOW (dialog), "dialog-error");
 	gtk_window_set_title (GTK_WINDOW (dialog), _("Missing resources"));
 	gtk_widget_realize (dialog);
 	gtk_widget_show (dialog);
@@ -1028,16 +1053,17 @@ applet_mobile_password_dialog_new (NMConnection *connection,
 
 	dialog = GTK_DIALOG (gtk_dialog_new ());
 	gtk_window_set_modal (GTK_WINDOW (dialog), TRUE);
+	gtk_window_set_position (GTK_WINDOW (dialog), GTK_WIN_POS_CENTER_ALWAYS);
 	gtk_window_set_title (GTK_WINDOW (dialog), _("Mobile broadband network password"));
 
-	gtk_dialog_add_button (dialog, GTK_STOCK_CANCEL, GTK_RESPONSE_REJECT);
-	w = gtk_dialog_add_button (dialog, GTK_STOCK_OK, GTK_RESPONSE_OK);
+	gtk_dialog_add_button (dialog, _("_Cancel"), GTK_RESPONSE_REJECT);
+	w = gtk_dialog_add_button (dialog, _("_OK"), GTK_RESPONSE_OK);
 	gtk_window_set_default (GTK_WINDOW (dialog), w);
 
 	s_con = nm_connection_get_setting_connection (connection);
 	id = nm_setting_connection_get_id (s_con);
 	g_assert (id);
-	tmp = g_strdup_printf (_("A password is required to connect to '%s'."), id);
+	tmp = g_strdup_printf (_("A password is required to connect to “%s”."), id);
 	w = gtk_label_new (tmp);
 	g_free (tmp);
 
@@ -1317,8 +1343,8 @@ applet_mobile_pin_dialog_new (const char *unlock_required,
 
 	builder = gtk_builder_new ();
 
-	if (!gtk_builder_add_from_file (builder, UIDIR "/gsm-unlock.ui", &error)) {
-		g_warning ("Couldn't load builder file: %s", error->message);
+	if (!gtk_builder_add_from_resource (builder, "/org/freedesktop/network-manager-applet/gsm-unlock.ui", &error)) {
+		g_warning ("Couldn't load builder resource: %s", error->message);
 		g_error_free (error);
 		g_object_unref (builder);
 		return NULL;
@@ -1337,7 +1363,7 @@ applet_mobile_pin_dialog_new (const char *unlock_required,
 		title = _("SIM PIN unlock required");
 		header = _("SIM PIN Unlock Required");
 		/* FIXME: some warning about # of times you can enter incorrect PIN */
-		desc = g_strdup_printf (_("The mobile broadband device '%s' requires a SIM PIN code before it can be used."), device_description);
+		desc = g_strdup_printf (_("The mobile broadband device “%s” requires a SIM PIN code before it can be used."), device_description);
 		/* Translators: PIN code entry label */
 		label1 = _("PIN code:");
 		label1_min = 4;
@@ -1348,7 +1374,7 @@ applet_mobile_pin_dialog_new (const char *unlock_required,
 		title = _("SIM PUK unlock required");
 		header = _("SIM PUK Unlock Required");
 		/* FIXME: some warning about # of times you can enter incorrect PUK */
-		desc = g_strdup_printf (_("The mobile broadband device '%s' requires a SIM PUK code before it can be used."), device_description);
+		desc = g_strdup_printf (_("The mobile broadband device “%s” requires a SIM PUK code before it can be used."), device_description);
 		/* Translators: PUK code entry label */
 		label1 = _("PUK code:");
 		label1_min = label1_max = 8;
@@ -1365,6 +1391,7 @@ applet_mobile_pin_dialog_new (const char *unlock_required,
 	} else
 		g_assert_not_reached ();
 
+	gtk_window_set_position (GTK_WINDOW(dialog), GTK_WIN_POS_CENTER_ALWAYS);
 	gtk_window_set_title (GTK_WINDOW (dialog), title);
 
 	widget = GTK_WIDGET (gtk_builder_get_object (builder, "header_label"));

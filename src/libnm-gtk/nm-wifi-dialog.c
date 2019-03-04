@@ -17,7 +17,7 @@
  * with this program; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
- * (C) Copyright 2007 - 2012 Red Hat, Inc.
+ * (C) Copyright 2007 - 2017 Red Hat, Inc.
  */
 
 #include "nm-default.h"
@@ -462,7 +462,7 @@ connection_combo_init (NMAWifiDialog *self, NMConnection *connection)
 
 		gtk_list_store_append (store, &tree_iter);
 		gtk_list_store_set (store, &tree_iter,
-		                    C_NAME_COLUMN, _("New..."),
+		                    C_NAME_COLUMN, _("New…"),
 		                    C_NEW_COLUMN, TRUE, -1);
 
 		gtk_list_store_append (store, &tree_iter);
@@ -897,7 +897,7 @@ security_combo_init (NMAWifiDialog *self, gboolean secrets_only)
 		wep_type = NM_WEP_KEY_TYPE_PASSPHRASE;
 	}
 
-	sec_model = gtk_list_store_new (2, G_TYPE_STRING, wireless_security_get_type ());
+	sec_model = gtk_list_store_new (2, G_TYPE_STRING, WIRELESS_TYPE_SECURITY);
 
 	if (nm_utils_security_valid (NMU_SEC_NONE, dev_caps, !!priv->ap, is_adhoc, ap_flags, ap_wpa, ap_rsn)) {
 		gtk_list_store_append (sec_model, &iter);
@@ -983,7 +983,7 @@ security_combo_init (NMAWifiDialog *self, gboolean secrets_only)
 	    || nm_utils_security_valid (NMU_SEC_WPA2_ENTERPRISE, dev_caps, !!priv->ap, is_adhoc, ap_flags, ap_wpa, ap_rsn)) {
 		WirelessSecurityWPAEAP *ws_wpa_eap;
 
-		ws_wpa_eap = ws_wpa_eap_new (priv->connection, FALSE, secrets_only);
+		ws_wpa_eap = ws_wpa_eap_new (priv->connection, FALSE, secrets_only, NULL);
 		if (ws_wpa_eap) {
 			add_security_item (self, WIRELESS_SECURITY (ws_wpa_eap), sec_model,
 			                   &iter, _("WPA & WPA2 Enterprise"));
@@ -1064,27 +1064,16 @@ internal_init (NMAWifiDialog *self,
 
 	gtk_box_set_spacing (GTK_BOX (gtk_dialog_get_content_area (GTK_DIALOG (self))), 2);
 
-	widget = gtk_dialog_add_button (GTK_DIALOG (self), GTK_STOCK_CANCEL, GTK_RESPONSE_CANCEL);
-	gtk_box_set_child_packing (GTK_BOX (gtk_dialog_get_action_area (GTK_DIALOG (self))), widget,
-	                           FALSE, TRUE, 0, GTK_PACK_END);
+	widget = gtk_dialog_add_button (GTK_DIALOG (self), _("_Cancel"), GTK_RESPONSE_CANCEL);
 
 	/* Connect/Create button */
 	if (priv->operation == OP_CREATE_ADHOC) {
-		GtkWidget *image;
-
-		widget = gtk_button_new_with_mnemonic (_("C_reate"));
-		image = gtk_image_new_from_stock (GTK_STOCK_CONNECT, GTK_ICON_SIZE_BUTTON);
-		gtk_button_set_image (GTK_BUTTON (widget), image);
-
-		gtk_widget_show (widget);
-		gtk_dialog_add_action_widget (GTK_DIALOG (self), widget, GTK_RESPONSE_OK);
+		widget = gtk_dialog_add_button (GTK_DIALOG (self), _("C_reate"), GTK_RESPONSE_OK);
 	} else {
-		widget = gtk_dialog_add_button (GTK_DIALOG (self), GTK_STOCK_CONNECT, GTK_RESPONSE_OK);
+		widget = gtk_dialog_add_button (GTK_DIALOG (self), _("C_onnect"), GTK_RESPONSE_OK);
 		priv->ok_response_button = widget;
 	}
 
-	gtk_box_set_child_packing (GTK_BOX (gtk_dialog_get_action_area (GTK_DIALOG (self))), widget,
-	                           FALSE, TRUE, 0, GTK_PACK_END);
 	g_object_set (G_OBJECT (widget), "can-default", TRUE, NULL);
 	gtk_widget_grab_default (widget);
 
@@ -1158,7 +1147,7 @@ internal_init (NMAWifiDialog *self,
 		if (ssid)
 			esc_ssid = nm_utils_ssid_to_utf8 (ssid);
 
-		tmp = g_strdup_printf (_("Passwords or encryption keys are required to access the Wi-Fi network '%s'."),
+		tmp = g_strdup_printf (_("Passwords or encryption keys are required to access the Wi-Fi network “%s”."),
 		                       esc_ssid ? esc_ssid : "<unknown>");
 		gtk_window_set_title (GTK_WINDOW (self), _("Wi-Fi Network Authentication Required"));
 		label = g_strdup_printf ("<span size=\"larger\" weight=\"bold\">%s</span>\n\n%s",
@@ -1396,8 +1385,8 @@ nma_wifi_dialog_init (NMAWifiDialog *self)
 
 	priv->builder = gtk_builder_new ();
 
-	if (!gtk_builder_add_from_file (priv->builder, UIDIR "/wifi.ui", &error)) {
-		g_warning ("Couldn't load builder file: %s", error->message);
+	if (!gtk_builder_add_from_resource (priv->builder, "/org/freedesktop/network-manager-applet/wifi.ui", &error)) {
+		g_warning ("Couldn't load builder resource: %s", error->message);
 		g_error_free (error);
 	}
 }

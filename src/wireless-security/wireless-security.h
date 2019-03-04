@@ -23,18 +23,11 @@
 #ifndef WIRELESS_SECURITY_H
 #define WIRELESS_SECURITY_H
 
-#include <glib.h>
-#include <gtk/gtk.h>
-
-#if defined (LIBNM_BUILD)
-#include <NetworkManager.h>
-#elif defined (LIBNM_GLIB_BUILD)
-#include <nm-connection.h>
-#else
-#error neither LIBNM_BUILD nor LIBNM_GLIB_BUILD defined
-#endif
-
 typedef struct _WirelessSecurity WirelessSecurity;
+GType wireless_security_get_type (void);
+
+#define WIRELESS_TYPE_SECURITY (wireless_security_get_type ())
+#define WIRELESS_SECURITY(x) ((WirelessSecurity *) x)
 
 typedef void (*WSChangedFunc) (WirelessSecurity *sec, gpointer user_data);
 
@@ -65,9 +58,6 @@ struct _WirelessSecurity {
 	WSValidateFunc validate;
 	WSDestroyFunc destroy;
 };
-
-#define WIRELESS_SECURITY(x) ((WirelessSecurity *) x)
-
 
 GtkWidget *wireless_security_get_widget (WirelessSecurity *sec);
 
@@ -102,8 +92,6 @@ WirelessSecurity *wireless_security_ref (WirelessSecurity *sec);
 
 void wireless_security_unref (WirelessSecurity *sec);
 
-GType wireless_security_get_type (void);
-
 /* Below for internal use only */
 
 #include "ws-wep-key.h"
@@ -118,7 +106,7 @@ WirelessSecurity *wireless_security_init (gsize obj_size,
                                           WSFillConnectionFunc fill_connection,
                                           WSUpdateSecretsFunc update_secrets,
                                           WSDestroyFunc destroy,
-                                          const char *ui_file,
+                                          const char *ui_resource,
                                           const char *ui_widget_name,
                                           const char *default_field);
 
@@ -135,7 +123,8 @@ GtkWidget *ws_802_1x_auth_combo_init (WirelessSecurity *sec,
                                       GCallback auth_combo_changed_cb,
                                       NMConnection *connection,
                                       gboolean is_editor,
-                                      gboolean secrets_only);
+                                      gboolean secrets_only,
+                                      const char *const*secrets_hints);
 
 void ws_802_1x_auth_combo_changed (GtkWidget *combo,
                                    WirelessSecurity *sec,

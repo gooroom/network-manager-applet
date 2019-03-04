@@ -30,10 +30,6 @@
 
 #include "nm-mobile-providers.h"
 
-#ifndef MOBILE_BROADBAND_PROVIDER_INFO
-#define MOBILE_BROADBAND_PROVIDER_INFO DATADIR"/mobile-broadband-provider-info/serviceproviders.xml"
-#endif
-
 #define ISO_3166_COUNTRY_CODES ISO_CODES_PREFIX"/share/xml/iso-codes/iso_3166.xml"
 #define ISO_CODES_LOCALESDIR ISO_CODES_PREFIX"/share/locale"
 
@@ -253,8 +249,7 @@ nma_mobile_provider_unref (NMAMobileProvider *provider)
 		g_free (provider->name);
 		g_hash_table_destroy (provider->lcl_names);
 
-		g_slist_foreach (provider->methods, (GFunc) nma_mobile_access_method_unref, NULL);
-		g_slist_free (provider->methods);
+		g_slist_free_full (provider->methods, (GDestroyNotify) nma_mobile_access_method_unref);
 
 		if (provider->mcc_mnc)
 			g_ptr_array_unref (provider->mcc_mnc);
@@ -991,7 +986,7 @@ mobile_providers_parse_sync (const gchar *country_codes,
 	if (!country_codes)
 		country_codes = ISO_3166_COUNTRY_CODES;
 	if (!service_providers)
-		service_providers = MOBILE_BROADBAND_PROVIDER_INFO;
+		service_providers = MOBILE_BROADBAND_PROVIDER_INFO_DATABASE;
 
 	countries = read_country_codes (country_codes,
 	                                cancellable,
@@ -1134,7 +1129,7 @@ struct _NMAMobileProvidersDatabasePrivate {
  * @self: a #NMAMobileProvidersDatabase.
  *
  * Returns: (element-type utf8 NMGtk.CountryInfo) (transfer none): a
- *	 hash table where keys are country names #gchar and values are #NMACountryInfos.
+ *	 hash table where keys are country names #gchar and values are #NMACountryInfo.
  */
 GHashTable *
 nma_mobile_providers_database_get_countries (NMAMobileProvidersDatabase *self)

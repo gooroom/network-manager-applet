@@ -1,7 +1,5 @@
-/* -*- Mode: C; tab-width: 4; indent-tabs-mode: t; c-basic-offset: 4 -*- */
-/* vim: set ft=c ts=4 sts=4 sw=4 noexpandtab smartindent: */
-
-/* EAP-FAST authentication method (RFC4851)
+/*
+ * EAP-FAST authentication method (RFC4851)
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,7 +15,7 @@
  * with this program; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
- * Copyright 2012 - 2014 Red Hat, Inc.
+ * Copyright 2012 - 2017 Red Hat, Inc.
  */
 
 #include "nm-default.h"
@@ -36,6 +34,7 @@
 struct _EAPMethodFAST {
 	EAPMethod parent;
 
+	const char *password_flags_name;
 	GtkSizeGroup *size_group;
 	WirelessSecurity *sec_parent;
 	gboolean is_editor;
@@ -126,7 +125,7 @@ add_to_size_group (EAPMethod *parent, GtkSizeGroup *group)
 }
 
 static void
-fill_connection (EAPMethod *parent, NMConnection *connection, NMSettingSecretFlags flags)
+fill_connection (EAPMethod *parent, NMConnection *connection)
 {
 	NMSetting8021x *s_8021x;
 	GtkWidget *widget;
@@ -185,7 +184,7 @@ fill_connection (EAPMethod *parent, NMConnection *connection, NMSettingSecretFla
 	gtk_tree_model_get (model, &iter, I_METHOD_COLUMN, &eap, -1);
 	g_assert (eap);
 
-	eap_method_fill_connection (eap, connection, flags);
+	eap_method_fill_connection (eap, connection);
 	eap_method_unref (eap);
 }
 
@@ -262,7 +261,8 @@ inner_auth_combo_init (EAPMethodFAST *method,
 	em_gtc = eap_method_simple_new (method->sec_parent,
 	                                connection,
 	                                EAP_METHOD_SIMPLE_TYPE_GTC,
-	                                simple_flags);
+	                                simple_flags,
+	                                NULL);
 	gtk_list_store_append (auth_model, &iter);
 	gtk_list_store_set (auth_model, &iter,
 	                    I_NAME_COLUMN, _("GTC"),
@@ -277,7 +277,8 @@ inner_auth_combo_init (EAPMethodFAST *method,
 	em_mschap_v2 = eap_method_simple_new (method->sec_parent,
 	                                      connection,
 	                                      EAP_METHOD_SIMPLE_TYPE_MSCHAP_V2,
-	                                      simple_flags);
+	                                      simple_flags,
+	                                      NULL);
 	gtk_list_store_append (auth_model, &iter);
 	gtk_list_store_set (auth_model, &iter,
 	                    I_NAME_COLUMN, _("MSCHAPv2"),
@@ -349,15 +350,15 @@ eap_method_fast_new (WirelessSecurity *ws_parent,
 	                          fill_connection,
 	                          update_secrets,
 	                          destroy,
-	                          UIDIR "/eap-method-fast.ui",
+	                          "/org/freedesktop/network-manager-applet/eap-method-fast.ui",
 	                          "eap_fast_notebook",
 	                          "eap_fast_anon_identity_entry",
 	                          FALSE);
 	if (!parent)
 		return NULL;
 
-	parent->password_flags_name = NM_SETTING_802_1X_PASSWORD;
 	method = (EAPMethodFAST *) parent;
+	method->password_flags_name = NM_SETTING_802_1X_PASSWORD;
 	method->sec_parent = ws_parent;
 	method->is_editor = is_editor;
 

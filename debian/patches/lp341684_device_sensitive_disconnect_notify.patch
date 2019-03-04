@@ -2,18 +2,17 @@ From: Ubuntu Developers <ubuntu-devel-discuss@lists.ubuntu.com>
 Date: Fri, 20 May 2016 14:27:57 +0800
 Subject: lp341684_device_sensitive_disconnect_notify
 
-=== modified file 'src/applet-device-wifi.c'
 ---
  src/applet-device-wifi.c |   2 +
- src/applet.c             | 140 +++++++++++++++++++++++++++++++++++++++++++++--
- src/applet.h             |   3 +
- 3 files changed, 141 insertions(+), 4 deletions(-)
+ src/applet.c             | 142 +++++++++++++++++++++++++++++++++++++++++++++--
+ src/applet.h             |   5 +-
+ 3 files changed, 143 insertions(+), 6 deletions(-)
 
-Index: ubuntu-applet/src/applet-device-wifi.c
+Index: network-manager-applet-1.8.20/src/applet-device-wifi.c
 ===================================================================
---- ubuntu-applet.orig/src/applet-device-wifi.c
-+++ ubuntu-applet/src/applet-device-wifi.c
-@@ -1379,6 +1379,8 @@ wifi_notify_connected (NMDevice *device,
+--- network-manager-applet-1.8.20.orig/src/applet-device-wifi.c
++++ network-manager-applet-1.8.20/src/applet-device-wifi.c
+@@ -1322,6 +1322,8 @@ wifi_notify_connected (NMDevice *device,
  
  	ap = _active_ap_get (applet, device);
  
@@ -22,11 +21,11 @@ Index: ubuntu-applet/src/applet-device-wifi.c
  	esc_ssid = get_ssid_utf8 (ap);
  
  	if (!ap)
-Index: ubuntu-applet/src/applet.c
+Index: network-manager-applet-1.8.20/src/applet.c
 ===================================================================
---- ubuntu-applet.orig/src/applet.c
-+++ ubuntu-applet/src/applet.c
-@@ -119,6 +119,19 @@ get_device_class_from_connection (NMConn
+--- network-manager-applet-1.8.20.orig/src/applet.c
++++ network-manager-applet-1.8.20/src/applet.c
+@@ -155,6 +155,19 @@ get_device_class_from_connection (NMConn
  	return NULL;
  }
  
@@ -46,7 +45,7 @@ Index: ubuntu-applet/src/applet.c
  static NMActiveConnection *
  applet_get_best_activating_connection (NMApplet *applet, NMDevice **device)
  {
-@@ -2108,6 +2121,64 @@ applet_get_exported_connection_for_devic
+@@ -2143,6 +2156,64 @@ applet_get_exported_connection_for_devic
  	return NULL;
  }
  
@@ -111,8 +110,8 @@ Index: ubuntu-applet/src/applet.c
  static void
  applet_common_device_state_changed (NMDevice *device,
                                      NMDeviceState new_state,
-@@ -2121,6 +2192,54 @@ applet_common_device_state_changed (NMDe
- 	vpn_activating = applet_is_any_vpn_activating (applet);
+@@ -2157,6 +2228,54 @@ applet_common_device_state_changed (NMDe
+ 
  
  	switch (new_state) {
 +	case NM_DEVICE_STATE_FAILED:
@@ -166,7 +165,7 @@ Index: ubuntu-applet/src/applet.c
  	case NM_DEVICE_STATE_PREPARE:
  	case NM_DEVICE_STATE_CONFIG:
  	case NM_DEVICE_STATE_NEED_AUTH:
-@@ -2209,13 +2328,26 @@ foo_client_state_changed_cb (NMClient *c
+@@ -2243,13 +2362,26 @@ foo_client_state_changed_cb (NMClient *c
  {
  	NMApplet *applet = NM_APPLET (user_data);
  
@@ -177,6 +176,7 @@ Index: ubuntu-applet/src/applet.c
 -		                            _("The network connection has been disconnected."),
 -		                            "nm-no-connection",
 -		                            PREF_DISABLE_DISCONNECTED_NOTIFICATIONS);
+-		break;
 +	case NM_STATE_ASLEEP:
 +	{
 +		OfflineNotificationContextInfo *info = applet->notification_queue_data;
@@ -192,22 +192,25 @@ Index: ubuntu-applet/src/applet.c
 +			g_source_remove (applet->deferred_id);
 +		applet->deferred_id = g_timeout_add (1000, foo_online_offline_deferred_notify, applet);
 +
- 		/* Fall through */
++		/* Fall through */
 +	}
  	default:
  		break;
  	}
-Index: ubuntu-applet/src/applet.h
+Index: network-manager-applet-1.8.20/src/applet.h
 ===================================================================
---- ubuntu-applet.orig/src/applet.h
-+++ ubuntu-applet/src/applet.h
-@@ -145,6 +145,9 @@ typedef struct {
+--- network-manager-applet-1.8.20.orig/src/applet.h
++++ network-manager-applet-1.8.20/src/applet.h
+@@ -149,8 +149,11 @@ typedef struct {
  
  	/* Tracker objects for secrets requests */
  	GSList *        secrets_reqs;
+-
+ 	guint           wifi_scan_id;
 +
-+	gpointer notification_queue_data;
-+	guint deferred_id;
++	gpointer	notification_queue_data;
++	guint		deferred_id;
++
  } NMApplet;
  
  typedef void (*AppletNewAutoConnectionCallback) (NMConnection *connection,

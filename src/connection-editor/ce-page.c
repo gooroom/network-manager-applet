@@ -34,7 +34,6 @@ G_DEFINE_ABSTRACT_TYPE (CEPage, ce_page, G_TYPE_OBJECT)
 enum {
 	PROP_0,
 	PROP_CONNECTION,
-	PROP_INITIALIZED,
 	PROP_PARENT_WINDOW,
 
 	LAST_PROP
@@ -43,6 +42,7 @@ enum {
 enum {
 	CHANGED,
 	INITIALIZED,
+	NEW_EDITOR,
 
 	LAST_SIGNAL
 };
@@ -287,14 +287,53 @@ ce_page_setup_mac_combo (CEPage *self, GtkComboBox *combo,
 	_set_active_combo_item (combo, mac, active_mac, active_idx);
 }
 
-gboolean
-ce_page_mac_entry_valid (GtkEntry *entry, int type, const char *property_name, GError **error)
+void
+ce_page_setup_cloned_mac_combo (GtkComboBoxText *combo, const char *current)
 {
-	const char *mac;
+	GtkWidget *entry;
+	static const char *entries[][2] = { { "preserve",  N_("Preserve") },
+	                                    { "permanent", N_("Permanent") },
+	                                    { "random",    N_("Random") },
+	                                    { "stable",    N_("Stable") } };
+	int i, active = -1;
 
-	g_return_val_if_fail (GTK_IS_ENTRY (entry), FALSE);
+	gtk_widget_set_tooltip_text (GTK_WIDGET (combo),
+		_("The MAC address entered here will be used as hardware address for "
+		  "the network device this connection is activated on. This feature is "
+		  "known as MAC cloning or spoofing. Example: 00:11:22:33:44:55"));
 
-	mac = gtk_entry_get_text (entry);
+	gtk_combo_box_text_remove_all (combo);
+
+	for (i = 0; i < G_N_ELEMENTS (entries); i++) {
+		gtk_combo_box_text_append (combo, entries[i][0], _(entries[i][1]));
+		if (nm_streq0 (current, entries[i][0]))
+			active = i;
+	}
+
+	if (active != -1) {
+		gtk_combo_box_set_active (GTK_COMBO_BOX (combo), active);
+	} else if (current && current[0]) {
+		entry = gtk_bin_get_child (GTK_BIN (combo));
+		g_assert (entry);
+		gtk_entry_set_text (GTK_ENTRY (entry), current);
+	}
+}
+
+char *
+ce_page_cloned_mac_get (GtkComboBoxText *combo)
+{
+	const char *id;
+
+	id = gtk_combo_box_get_active_id (GTK_COMBO_BOX (combo));
+	if (id)
+		return g_strdup (id);
+
+	return gtk_combo_box_text_get_active_text (combo);
+}
+
+static gboolean
+mac_valid (const char *mac, int type, const char *property_name, GError **error)
+{
 	if (mac && *mac) {
 		if (!nm_utils_hwaddr_valid (mac, nm_utils_hwaddr_len (type))) {
 			const char *addr_type;
@@ -312,22 +351,46 @@ ce_page_mac_entry_valid (GtkEntry *entry, int type, const char *property_name, G
 			return FALSE;
 		}
 	}
+
 	return TRUE;
+}
+
+gboolean
+ce_page_cloned_mac_combo_valid (GtkComboBoxText *combo, int type, const char *property_name, GError **error)
+{
+	gs_free char *text = NULL;
+
+	if (gtk_combo_box_get_active (GTK_COMBO_BOX (combo)) != -1)
+		return TRUE;
+
+	text = gtk_combo_box_text_get_active_text (combo);
+	return mac_valid (text,
+	                  type,
+	                  property_name,
+	                  error);
+}
+
+gboolean
+ce_page_mac_entry_valid (GtkEntry *entry, int type, const char *property_name, GError **error)
+{
+	g_return_val_if_fail (GTK_IS_ENTRY (entry), FALSE);
+
+	return mac_valid (gtk_entry_get_text (entry), type, property_name, error);
 }
 
 gboolean
 ce_page_interface_name_valid (const char *iface, const char *property_name, GError **error)
 {
 	if (iface && *iface) {
-		if (!nm_utils_iface_valid_name (iface)) {
+		if (!nm_utils_is_valid_iface_name (iface, error)) {
 			if (property_name) {
-				g_set_error (error, NMA_ERROR, NMA_ERROR_GENERIC,
-				             _("invalid interface-name for %s (%s)"),
-				             property_name, iface);
+				g_prefix_error (error,
+				                _("invalid interface-name for %s (%s): "),
+				                property_name, iface);
 			} else {
-				g_set_error (error, NMA_ERROR, NMA_ERROR_GENERIC,
-				             _("invalid interface-name (%s)"),
-				             iface);
+				g_prefix_error (error,
+				                _("invalid interface-name (%s): "),
+				                iface);
 			}
 			return FALSE;
 		}
@@ -339,8 +402,7 @@ static char **
 _get_device_list (CEPage *self,
                   GType device_type,
                   gboolean set_ifname,
-                  const char *mac_property,
-                  gboolean ifname_first)
+                  const char *mac_property)
 {
 	const GPtrArray *devices;
 	GPtrArray *interfaces;
@@ -360,7 +422,8 @@ _get_device_list (CEPage *self,
 		char *mac = NULL;
 		char *item;
 
-		if (!G_TYPE_CHECK_INSTANCE_TYPE (dev, device_type))
+		if (   device_type != G_TYPE_NONE
+		    && !G_TYPE_CHECK_INSTANCE_TYPE (dev, device_type))
 			continue;
 
 		if (device_type == NM_TYPE_DEVICE_BT)
@@ -370,17 +433,18 @@ _get_device_list (CEPage *self,
 		if (mac_property)
 			g_object_get (G_OBJECT (dev), mac_property, &mac, NULL);
 
-		if (set_ifname && mac_property) {
-			if (ifname_first)
-				item = g_strdup_printf ("%s (%s)", ifname, mac);
-			else
-				item = g_strdup_printf ("%s (%s)", mac, ifname);
-		} else
+		if (mac && !mac[0])
+			nm_clear_g_free (&mac);
+
+		if (set_ifname && mac_property)
+			item = g_strdup_printf ("%s%s%s%s", ifname, NM_PRINT_FMT_QUOTED (mac, " (", mac, ")", ""));
+		else
 			item = g_strdup (set_ifname ? ifname : mac);
 
-		g_ptr_array_add (interfaces, item);
-		if (mac_property)
-			g_free (mac);
+		if (item)
+			g_ptr_array_add (interfaces, item);
+
+		g_free (mac);
 	}
 	g_ptr_array_add (interfaces, NULL);
 
@@ -459,15 +523,14 @@ ce_page_setup_device_combo (CEPage *self,
                             GType device_type,
                             const char *ifname,
                             const char *mac,
-                            const char *mac_property,
-                            gboolean ifname_first)
+                            const char *mac_property)
 {
 	char **iter, *active_item = NULL;
 	int i, active_idx = -1;
 	char **device_list;
 	char *item;
 
-	device_list = _get_device_list (self, device_type, TRUE, mac_property, ifname_first);
+	device_list = _get_device_list (self, device_type, TRUE, mac_property);
 
 	if (ifname && mac)
 		item = g_strdup_printf ("%s (%s)", ifname, mac);
@@ -493,9 +556,9 @@ gboolean
 ce_page_device_entry_get (GtkEntry *entry, int type, gboolean check_ifname,
                           char **ifname, char **mac, const char *device_name, GError **error)
 {
-	char *first, *second;
+	gs_free char *first = NULL;
+	gs_free char *second = NULL;
 	const char *ifname_tmp = NULL, *mac_tmp = NULL;
-	gboolean valid = TRUE;
 	const char *str;
 
 	g_return_val_if_fail (entry != NULL, FALSE);
@@ -503,29 +566,36 @@ ce_page_device_entry_get (GtkEntry *entry, int type, gboolean check_ifname,
 
 	str = gtk_entry_get_text (entry);
 
-	valid = _device_entry_parse (str, &first, &second);
+	if (!_device_entry_parse (str, &first, &second)) {
+		g_set_error_literal (error, NMA_ERROR, NMA_ERROR_GENERIC,
+		                     _("can’t parse device name"));
+		goto invalid;
+	}
 
 	if (first) {
 		if (nm_utils_hwaddr_valid (first, nm_utils_hwaddr_len (type)))
 			mac_tmp = first;
-		else if (!check_ifname || nm_utils_iface_valid_name (first))
+		else if (!check_ifname || nm_utils_is_valid_iface_name (first, error))
 			ifname_tmp = first;
 		else
-			valid = FALSE;
+			goto invalid;
 	}
 	if (second) {
 		if (nm_utils_hwaddr_valid (second, nm_utils_hwaddr_len (type))) {
-			if (!mac_tmp)
+			if (!mac_tmp) {
 				mac_tmp = second;
-			else
-				valid = FALSE;
-		} else if (!check_ifname || nm_utils_iface_valid_name (second)) {
+			} else {
+				g_set_error_literal (error, NMA_ERROR, NMA_ERROR_GENERIC,
+				                     _("invalid hardware address"));
+				goto invalid;
+			}
+		} else if (!check_ifname || nm_utils_is_valid_iface_name (second, error)) {
 			if (!ifname_tmp)
 				ifname_tmp = second;
 			else
-				valid = FALSE;
+				goto invalid;
 		} else
-			valid = FALSE;
+			goto invalid;
 	}
 
 	if (ifname)
@@ -533,17 +603,22 @@ ce_page_device_entry_get (GtkEntry *entry, int type, gboolean check_ifname,
 	if (mac)
 		*mac = g_strdup (mac_tmp);
 
-	g_free (first);
-	g_free (second);
+	return TRUE;
 
-	if (!valid) {
+invalid:
+	if (error) {
+		g_prefix_error (error,
+		                _("invalid %s (%s): "),
+		                device_name ? device_name : _("device"),
+		                str);
+	} else {
 		g_set_error (error, NMA_ERROR, NMA_ERROR_GENERIC,
-		             _("invalid %s (%s)"),
-		             device_name ? device_name : _("device"),
-		             str);
+		             _("invalid %s (%s) "),
+		            device_name ? device_name : _("device"),
+		            str);
 	}
 
-	return valid;
+	return FALSE;
 }
 
 char *
@@ -585,13 +660,6 @@ ce_page_get_next_available_name (const GPtrArray *connections, const char *forma
 	return cname;
 }
 
-static void
-emit_initialized (CEPage *self, GError *error)
-{
-	self->initialized = TRUE;
-	g_signal_emit (self, signals[INITIALIZED], 0, error);
-}
-
 void
 ce_page_complete_init (CEPage *self,
                        const char *setting_name,
@@ -601,27 +669,29 @@ ce_page_complete_init (CEPage *self,
 	GError *update_error = NULL;
 	GVariant *setting_dict;
 	char *dbus_err;
-	gboolean ignore_error = FALSE;
 
 	g_return_if_fail (self != NULL);
 	g_return_if_fail (CE_IS_PAGE (self));
 
 	if (error) {
+		/* Ignore missing settings errors */
 		dbus_err = g_dbus_error_get_remote_error (error);
-		ignore_error =    !g_strcmp0 (dbus_err, "org.freedesktop.NetworkManager.Settings.InvalidSetting")
-		               || !g_strcmp0 (dbus_err, "org.freedesktop.NetworkManager.Settings.Connection.SettingNotFound")
-		               || !g_strcmp0 (dbus_err, "org.freedesktop.NetworkManager.AgentManager.NoSecrets");
+		if (   g_strcmp0 (dbus_err, "org.freedesktop.NetworkManager.Settings.InvalidSetting") == 0
+		    || g_strcmp0 (dbus_err, "org.freedesktop.NetworkManager.Settings.Connection.SettingNotFound") == 0
+		    || g_strcmp0 (dbus_err, "org.freedesktop.NetworkManager.AgentManager.NoSecrets") == 0)
+			g_clear_error (&error);
 		g_free (dbus_err);
 	}
 
-	/* Ignore missing settings errors */
-	if (error && !ignore_error) {
-		emit_initialized (self, error);
-		return;
-	} else if (!setting_name || !secrets || g_variant_n_children (secrets) == 0) {
+	if (error) {
+		g_warning ("Couldn't fetch secrets: %s", error->message);
+		g_error_free (error);
+		goto out;
+	}
+
+	if (!setting_name || !secrets || g_variant_n_children (secrets) == 0) {
 		/* Success, no secrets */
-		emit_initialized (self, NULL);
-		return;
+		goto out;
 	}
 
 	g_assert (setting_name);
@@ -630,28 +700,22 @@ ce_page_complete_init (CEPage *self,
 	setting_dict = g_variant_lookup_value (secrets, setting_name, NM_VARIANT_TYPE_SETTING);
 	if (!setting_dict) {
 		/* Success, no secrets */
-		emit_initialized (self, NULL);
-		return;
+		goto out;
 	}
 	g_variant_unref (setting_dict);
 
 	/* Update the connection with the new secrets */
-	if (nm_connection_update_secrets (self->connection,
+	if (!nm_connection_update_secrets (self->connection,
 	                                  setting_name,
 	                                  secrets,
 	                                  &update_error)) {
-		/* Success */
-		emit_initialized (self, NULL);
-		return;
+		g_warning ("Couldn't update the secrets: %s", update_error->message);
+		g_error_free (update_error);
+		goto out;
 	}
 
-	if (!update_error) {
-		g_set_error_literal (&update_error, NMA_ERROR, NMA_ERROR_GENERIC,
-		                     _("Failed to update connection secrets due to an unknown error."));
-	}
-
-	emit_initialized (self, update_error);
-	g_clear_error (&update_error);
+out:
+	g_signal_emit (self, signals[INITIALIZED], 0, NULL);
 }
 
 static void
@@ -698,20 +762,31 @@ ce_page_get_title (CEPage *self)
 	return self->title;
 }
 
-gboolean
-ce_page_get_initialized (CEPage *self)
-{
-	g_return_val_if_fail (CE_IS_PAGE (self), FALSE);
-
-	return self->initialized;
-}
-
 void
 ce_page_changed (CEPage *self)
 {
 	g_return_if_fail (CE_IS_PAGE (self));
 
 	g_signal_emit (self, signals[CHANGED], 0);
+}
+
+NMConnectionEditor *
+ce_page_new_editor (CEPage *self,
+                    GtkWindow *parent_window,
+                    NMConnection *connection)
+{
+	NMConnectionEditor *editor;
+
+	g_return_val_if_fail (CE_IS_PAGE (self), NULL);
+
+	editor = nm_connection_editor_new (parent_window,
+	                                   connection,
+	                                   self->client);
+	if (!editor)
+		return NULL;
+
+	g_signal_emit (self, signals[NEW_EDITOR], 0, editor);
+	return editor;
 }
 
 static void
@@ -723,9 +798,6 @@ get_property (GObject *object, guint prop_id,
 	switch (prop_id) {
 	case PROP_CONNECTION:
 		g_value_set_object (value, self->connection);
-		break;
-	case PROP_INITIALIZED:
-		g_value_set_boolean (value, self->initialized);
 		break;
 	default:
 		G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -775,14 +847,6 @@ ce_page_class_init (CEPageClass *page_class)
 		                      G_PARAM_READABLE | G_PARAM_WRITABLE | G_PARAM_CONSTRUCT_ONLY));
 
 	g_object_class_install_property
-		(object_class, PROP_INITIALIZED,
-		 g_param_spec_boolean (CE_PAGE_INITIALIZED,
-		                       "Initialized",
-		                       "Initialized",
-		                       FALSE,
-		                       G_PARAM_READABLE));
-
-	g_object_class_install_property
 		(object_class, PROP_PARENT_WINDOW,
 		 g_param_spec_pointer (CE_PAGE_PARENT_WINDOW,
 		                       "Parent window",
@@ -794,53 +858,56 @@ ce_page_class_init (CEPageClass *page_class)
 		g_signal_new ("changed",
 	                      G_OBJECT_CLASS_TYPE (object_class),
 	                      G_SIGNAL_RUN_FIRST,
-	                      G_STRUCT_OFFSET (CEPageClass, changed),
-	                      NULL, NULL, NULL,
+	                      0, NULL, NULL, NULL,
 	                      G_TYPE_NONE, 0);
 
 	signals[INITIALIZED] = 
-		g_signal_new ("initialized",
+		g_signal_new (CE_PAGE_INITIALIZED,
 	                      G_OBJECT_CLASS_TYPE (object_class),
 	                      G_SIGNAL_RUN_FIRST,
-	                      G_STRUCT_OFFSET (CEPageClass, initialized),
-	                      NULL, NULL, NULL,
+	                      0, NULL, NULL, NULL,
+	                      G_TYPE_NONE, 1, G_TYPE_POINTER);
+
+	signals[NEW_EDITOR] =
+		g_signal_new (CE_PAGE_NEW_EDITOR,
+	                      G_OBJECT_CLASS_TYPE (object_class),
+	                      G_SIGNAL_RUN_FIRST,
+	                      0, NULL, NULL, NULL,
 	                      G_TYPE_NONE, 1, G_TYPE_POINTER);
 }
 
 
-NMConnection *
-ce_page_new_connection (const char *format,
-                        const char *ctype,
-                        gboolean autoconnect,
-                        NMClient *client,
-                        gpointer user_data)
+void
+ce_page_complete_connection (NMConnection *connection,
+                             const char *format,
+                             const char *ctype,
+                             gboolean autoconnect,
+                             NMClient *client)
 {
-	NMConnection *connection;
 	NMSettingConnection *s_con;
-	char *uuid, *id;
+	char *id, *uuid;
 	const GPtrArray *connections;
 
-	connection = nm_simple_connection_new ();
+	s_con = nm_connection_get_setting_connection (connection);
+	if (!s_con) {
+		s_con = NM_SETTING_CONNECTION (nm_setting_connection_new ());
+		nm_connection_add_setting (connection, NM_SETTING (s_con));
+	}
 
-	s_con = NM_SETTING_CONNECTION (nm_setting_connection_new ());
-	nm_connection_add_setting (connection, NM_SETTING (s_con));
+	if (!nm_setting_connection_get_id (s_con)) {
+		connections = nm_client_get_connections (client);
+		id = ce_page_get_next_available_name (connections, format);
+		g_object_set (s_con, NM_SETTING_CONNECTION_ID, id, NULL);
+		g_free (id);
+	}
 
 	uuid = nm_utils_uuid_generate ();
-
-	connections = nm_client_get_connections (client);
-	id = ce_page_get_next_available_name (connections, format);
-
 	g_object_set (s_con,
 	              NM_SETTING_CONNECTION_UUID, uuid,
-	              NM_SETTING_CONNECTION_ID, id,
 	              NM_SETTING_CONNECTION_TYPE, ctype,
 	              NM_SETTING_CONNECTION_AUTOCONNECT, autoconnect,
 	              NULL);
-
 	g_free (uuid);
-	g_free (id);
-
-	return connection;
 }
 
 CEPage *
@@ -849,7 +916,7 @@ ce_page_new (GType page_type,
              NMConnection *connection,
              GtkWindow *parent_window,
              NMClient *client,
-             const char *ui_file,
+             const char *ui_resource,
              const char *widget_name,
              const char *title)
 {
@@ -857,7 +924,7 @@ ce_page_new (GType page_type,
 	GError *error = NULL;
 
 	g_return_val_if_fail (title != NULL, NULL);
-	if (ui_file)
+	if (ui_resource)
 		g_return_val_if_fail (widget_name != NULL, NULL);
 
 	self = CE_PAGE (g_object_new (page_type,
@@ -868,9 +935,9 @@ ce_page_new (GType page_type,
 	self->client = client;
 	self->editor = editor;
 
-	if (ui_file) {
-		if (!gtk_builder_add_from_file (self->builder, ui_file, &error)) {
-			g_warning ("Couldn't load builder file: %s", error->message);
+	if (ui_resource) {
+		if (!gtk_builder_add_from_resource (self->builder, ui_resource, &error)) {
+			g_warning ("Couldn't load builder resource: %s", error->message);
 			g_error_free (error);
 			g_object_unref (self);
 			return NULL;
@@ -878,7 +945,7 @@ ce_page_new (GType page_type,
 
 		self->page = GTK_WIDGET (gtk_builder_get_object (self->builder, widget_name));
 		if (!self->page) {
-			g_warning ("Couldn't load page widget '%s' from %s", widget_name, ui_file);
+			g_warning ("Couldn't load page widget '%s' from %s", widget_name, ui_resource);
 			g_object_unref (self);
 			return NULL;
 		}

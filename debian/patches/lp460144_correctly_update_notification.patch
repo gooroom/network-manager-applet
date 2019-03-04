@@ -6,11 +6,11 @@ Subject: lp460144_correctly_update_notification
  src/applet.c | 38 +++++++++++++++++---------------------
  1 file changed, 17 insertions(+), 21 deletions(-)
 
-Index: ubuntu-applet/src/applet.c
+Index: network-manager-applet-1.8.18/src/applet.c
 ===================================================================
---- ubuntu-applet.orig/src/applet.c
-+++ ubuntu-applet/src/applet.c
-@@ -635,17 +635,6 @@ applet_menu_item_create_device_item_help
+--- network-manager-applet-1.8.18.orig/src/applet.c
++++ network-manager-applet-1.8.18/src/applet.c
+@@ -687,17 +687,6 @@ applet_menu_item_create_device_item_help
  	return item;
  }
  
@@ -28,7 +28,7 @@ Index: ubuntu-applet/src/applet.c
  static gboolean
  applet_notify_server_has_actions (void)
  {
-@@ -703,19 +692,28 @@ applet_do_notify (NMApplet *applet,
+@@ -754,19 +743,28 @@ applet_do_notify (NMApplet *applet,
  	if (!applet->agent)
  		return;
  
@@ -37,12 +37,12 @@ Index: ubuntu-applet/src/applet.c
  	escaped = utils_escape_notify_message (message);
 -	notify = notify_notification_new (summary,
 -	                                  escaped,
--	                                  icon ? icon : GTK_STOCK_NETWORK
+-	                                  icon ? icon : "network-workgroup"
 +
 +	if (applet->notification == NULL) {
 +		notify = notify_notification_new (summary,
 +		                                  escaped,
-+		                                  icon ? icon : GTK_STOCK_NETWORK
++		                                  icon ? icon : "network-workgroup"
  #if HAVE_LIBNOTIFY_07
 -	                                  );
 +		                                  );
@@ -57,7 +57,7 @@ Index: ubuntu-applet/src/applet.c
 +		notify_notification_update (notify,
 +		                            summary,
 +		                            escaped,
-+		                            icon ? icon : GTK_STOCK_NETWORK);
++		                            icon ? icon : "network-workgroup");
 +	}
 +
  	g_free (escaped);
@@ -65,17 +65,17 @@ Index: ubuntu-applet/src/applet.c
  
  #if HAVE_LIBNOTIFY_07
  	notify_notification_set_hint (notify, "transient", g_variant_new_boolean (TRUE));
-@@ -3191,7 +3189,6 @@ status_icon_activate_cb (GtkStatusIcon *
+@@ -3281,7 +3279,6 @@ status_icon_activate_cb (GtkStatusIcon *
  	/* Have clicking on the applet act also as acknowledgement
- 	 * of the notification. 
+ 	 * of the notification.
  	 */
 -	applet_clear_notify (applet);
  
- 	/* Kill any old menu */
- 	if (applet->menu)
-@@ -3221,7 +3218,6 @@ status_icon_popup_menu_cb (GtkStatusIcon
+ 	applet_start_wifi_scan (applet, NULL);
+ 
+@@ -3313,7 +3310,6 @@ status_icon_popup_menu_cb (GtkStatusIcon
  	/* Have clicking on the applet act also as acknowledgement
- 	 * of the notification. 
+ 	 * of the notification.
  	 */
 -	applet_clear_notify (applet);
  

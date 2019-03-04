@@ -17,7 +17,7 @@
  * with this program; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
- * Copyright 2008 - 2014 Red Hat, Inc.
+ * Copyright 2008 - 2017 Red Hat, Inc.
  * Copyright 2008 Novell, Inc.
  */
 
@@ -158,20 +158,20 @@ ethernet_get_icon (NMDevice *device,
 
 	switch (state) {
 	case NM_DEVICE_STATE_PREPARE:
-		*tip = g_strdup_printf (_("Preparing ethernet network connection '%s'..."), id);
+		*tip = g_strdup_printf (_("Preparing ethernet network connection “%s”…"), id);
 		break;
 	case NM_DEVICE_STATE_CONFIG:
-		*tip = g_strdup_printf (_("Configuring ethernet network connection '%s'..."), id);
+		*tip = g_strdup_printf (_("Configuring ethernet network connection “%s”…"), id);
 		break;
 	case NM_DEVICE_STATE_NEED_AUTH:
-		*tip = g_strdup_printf (_("User authentication required for ethernet network connection '%s'..."), id);
+		*tip = g_strdup_printf (_("User authentication required for ethernet network connection “%s”…"), id);
 		break;
 	case NM_DEVICE_STATE_IP_CONFIG:
-		*tip = g_strdup_printf (_("Requesting an ethernet network address for '%s'..."), id);
+		*tip = g_strdup_printf (_("Requesting an ethernet network address for “%s”…"), id);
 		break;
 	case NM_DEVICE_STATE_ACTIVATED:
 		*out_icon_name = "nm-device-wired";
-		*tip = g_strdup_printf (_("Ethernet network connection '%s' active"), id);
+		*tip = g_strdup_printf (_("Ethernet network connection “%s” active"), id);
 		break;
 	default:
 		break;
@@ -321,7 +321,7 @@ pppoe_get_secrets (SecretsRequest *req, GError **error)
 
 	builder = gtk_builder_new ();
 
-	if (!gtk_builder_add_from_file (builder, UIDIR "/ce-page-dsl.ui", &tmp_error)) {
+	if (!gtk_builder_add_from_resource (builder, "/org/freedesktop/network-manager-applet/connection-editor/ce-page-dsl.ui", &tmp_error)) {
 		g_set_error (error,
 		             NM_SECRET_AGENT_ERROR,
 		             NM_SECRET_AGENT_ERROR_FAILED,
@@ -346,8 +346,8 @@ pppoe_get_secrets (SecretsRequest *req, GError **error)
 	gtk_window_set_title (GTK_WINDOW (info->dialog), _("DSL authentication"));
 	gtk_window_set_modal (GTK_WINDOW (info->dialog), TRUE);
 
-	gtk_dialog_add_button (GTK_DIALOG (info->dialog), GTK_STOCK_CANCEL, GTK_RESPONSE_REJECT);
-	w = gtk_dialog_add_button (GTK_DIALOG (info->dialog), GTK_STOCK_OK, GTK_RESPONSE_OK);
+	gtk_dialog_add_button (GTK_DIALOG (info->dialog), _("_Cancel"), GTK_RESPONSE_REJECT);
+	w = gtk_dialog_add_button (GTK_DIALOG (info->dialog), _("_OK"), GTK_RESPONSE_OK);
 	info->ok_button = w;
 
 	gtk_box_pack_start (GTK_BOX (gtk_dialog_get_content_area (GTK_DIALOG (info->dialog))),

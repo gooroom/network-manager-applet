@@ -109,7 +109,7 @@ ws_dynamic_wep_new (NMConnection *connection,
 	                                 fill_connection,
 	                                 update_secrets,
 	                                 destroy,
-	                                 UIDIR "/ws-dynamic-wep.ui",
+	                                 "/org/freedesktop/network-manager-applet/ws-dynamic-wep.ui",
 	                                 "dynamic_wep_notebook",
 	                                 NULL);
 	if (!parent)
@@ -124,7 +124,8 @@ ws_dynamic_wep_new (NMConnection *connection,
 	                                    (GCallback) auth_combo_changed_cb,
 	                                    connection,
 	                                    is_editor,
-	                                    secrets_only);
+	                                    secrets_only,
+	                                    NULL);
 	auth_combo_changed_cb (widget, (gpointer) parent);
 
 	return (WirelessSecurityDynamicWEP *) parent;

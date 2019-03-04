@@ -15,7 +15,7 @@
  * with this program; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
- * Copyright 2012 Red Hat, Inc.
+ * Copyright 2017 Red Hat, Inc.
  */
 
 #include "nm-default.h"
@@ -30,6 +30,8 @@
 #include "page-bluetooth.h"
 #include "page-dsl.h"
 #include "page-infiniband.h"
+#include "page-ip-tunnel.h"
+#include "page-macsec.h"
 #include "page-bond.h"
 #include "page-team.h"
 #include "page-bridge.h"
@@ -110,12 +112,14 @@ get_connection_type_list (void)
 	                    NM_TYPE_SETTING_BLUETOOTH,
 	                    FALSE);
 	add_type_data_real (array, _("Bluetooth"), bluetooth_connection_new, NM_TYPE_SETTING_BLUETOOTH);
-	add_type_data_real (array, _("DSL"), dsl_connection_new, NM_TYPE_SETTING_PPPOE);
+	add_type_data_real (array, _("DSL/PPPoE"), dsl_connection_new, NM_TYPE_SETTING_PPPOE);
 	add_type_data_real (array, _("InfiniBand"), infiniband_connection_new, NM_TYPE_SETTING_INFINIBAND);
 	add_type_data_virtual (array, _("Bond"), bond_connection_new, NM_TYPE_SETTING_BOND);
 	add_type_data_virtual (array, _("Team"), team_connection_new, NM_TYPE_SETTING_TEAM);
 	add_type_data_virtual (array, _("Bridge"), bridge_connection_new, NM_TYPE_SETTING_BRIDGE);
 	add_type_data_virtual (array, _("VLAN"), vlan_connection_new, NM_TYPE_SETTING_VLAN);
+	add_type_data_virtual (array, _("IP tunnel"), ip_tunnel_connection_new, NM_TYPE_SETTING_IP_TUNNEL);
+	add_type_data_virtual (array, _("MACsec"), macsec_connection_new, NM_TYPE_SETTING_MACSEC);
 
 	add_type_data_virtual (array, _("VPN"), vpn_connection_new, NM_TYPE_SETTING_VPN);
 
@@ -170,6 +174,136 @@ no_description:
 	gtk_label_set_text (label, "");
 }
 
+NMConnection *
+vpn_connection_from_file (const char *filename, GError **error)
+{
+	NMConnection *connection = NULL;
+	GSList *iter;
+
+	for (iter = vpn_get_plugin_infos (); !connection && iter; iter = iter->next) {
+		NMVpnEditorPlugin *plugin;
+
+		plugin = nm_vpn_plugin_info_get_editor_plugin (iter->data);
+		g_clear_error (error);
+		connection = nm_vpn_editor_plugin_import (plugin, filename, error);
+		if (connection)
+			break;
+	}
+
+	if (connection) {
+		NMSettingVpn *s_vpn;
+		const char *service_type;
+
+		s_vpn = nm_connection_get_setting_vpn (connection);
+		service_type = s_vpn ? nm_setting_vpn_get_service_type (s_vpn) : NULL;
+
+		/* Check connection sanity. */
+		if (!service_type || !strlen (service_type)) {
+			g_object_unref (connection);
+			connection = NULL;
+			g_set_error_literal (error, NMA_ERROR, NMA_ERROR_GENERIC, _("No VPN service type."));
+		}
+	}
+
+	if (!connection)
+		g_prefix_error (error, _("The VPN plugin failed to import the VPN connection correctly: "));
+
+	return connection;
+}
+
+typedef struct {
+	GtkWindow *parent;
+	NMClient *client;
+	PageNewConnectionResultFunc result_func;
+	gpointer user_data;
+} ImportVpnInfo;
+
+static void
+import_vpn_from_file_cb (GtkWidget *dialog, gint response, gpointer user_data)
+{
+	char *filename = NULL;
+	ImportVpnInfo *info = (ImportVpnInfo *) user_data;
+	NMConnection *connection = NULL;
+	GError *error = NULL;
+	gboolean canceled = TRUE;
+
+	if (response != GTK_RESPONSE_ACCEPT)
+		goto out;
+
+	filename = gtk_file_chooser_get_filename (GTK_FILE_CHOOSER (dialog));
+	if (!filename) {
+		g_warning ("%s: didn't get a filename back from the chooser!", __func__);
+		goto out;
+	}
+
+	canceled = FALSE;
+	connection = vpn_connection_from_file (filename, &error);
+	if (connection) {
+		/* Wrap around the actual new function so that the page can complete
+		 * the missing parts, such as UUID or make up the connection name. */
+		vpn_connection_new (FUNC_TAG_PAGE_NEW_CONNECTION_CALL,
+		                    info->parent,
+		                    NULL,
+		                    NULL,
+		                    connection,
+		                    info->client,
+		                    info->result_func,
+		                    info->user_data);
+	}
+
+	g_free (filename);
+
+out:
+	if (!connection) {
+		info->result_func (FUNC_TAG_PAGE_NEW_CONNECTION_RESULT_CALL,
+		                   connection, canceled, error, info->user_data);
+	}
+
+	gtk_widget_hide (dialog);
+	gtk_widget_destroy (dialog);
+	g_object_unref (info->parent);
+	g_object_unref (info->client);
+	g_slice_free (ImportVpnInfo, info);
+}
+
+static void
+vpn_connection_import (FUNC_TAG_PAGE_NEW_CONNECTION_IMPL,
+                       GtkWindow *parent,
+                       const char *detail,
+                       gpointer detail_data,
+                       NMConnection *connection,
+                       NMClient *client,
+                       PageNewConnectionResultFunc result_func,
+                       gpointer user_data)
+{
+	ImportVpnInfo *info;
+	GtkWidget *dialog;
+	const char *home_folder;
+
+	/* The import function decides about the type. */
+	g_return_if_fail (!detail);
+	g_warn_if_fail (!connection);
+
+	info = g_slice_new (ImportVpnInfo);
+	info->parent = g_object_ref (parent);
+	info->result_func = result_func;
+	info->client = g_object_ref (client);
+	info->user_data = user_data;
+
+	dialog = gtk_file_chooser_dialog_new (_("Select file to import"),
+	                                      NULL,
+	                                      GTK_FILE_CHOOSER_ACTION_OPEN,
+	                                      _("_Cancel"), GTK_RESPONSE_CANCEL,
+	                                      _("_Open"), GTK_RESPONSE_ACCEPT,
+	                                      NULL);
+	home_folder = g_get_home_dir ();
+	gtk_file_chooser_set_current_folder (GTK_FILE_CHOOSER (dialog), home_folder);
+
+	g_signal_connect (G_OBJECT (dialog), "response", G_CALLBACK (import_vpn_from_file_cb), info);
+	gtk_widget_show_all (dialog);
+	gtk_window_present (GTK_WINDOW (dialog));
+}
+
 static void
 set_up_connection_type_combo (GtkComboBox *combo,
                               GtkLabel *description_label,
@@ -203,11 +337,11 @@ set_up_connection_type_combo (GtkComboBox *combo,
 	for (i = 0; list[i].name; i++) {
 		if (type_filter_func) {
 			if (   (   list[i].setting_types[0] == G_TYPE_INVALID
-			        || !type_filter_func (list[i].setting_types[0], user_data))
+			        || !type_filter_func (FUNC_TAG_NEW_CONNECTION_TYPE_FILTER_CALL, list[i].setting_types[0], user_data))
 			    && (   list[i].setting_types[1] == G_TYPE_INVALID
-			        || !type_filter_func (list[i].setting_types[1], user_data))
+			        || !type_filter_func (FUNC_TAG_NEW_CONNECTION_TYPE_FILTER_CALL, list[i].setting_types[1], user_data))
 			    && (   list[i].setting_types[2] == G_TYPE_INVALID
-			        || !type_filter_func (list[i].setting_types[2], user_data)))
+			        || !type_filter_func (FUNC_TAG_NEW_CONNECTION_TYPE_FILTER_CALL, list[i].setting_types[2], user_data)))
 				continue;
 		}
 
@@ -345,7 +479,7 @@ set_up_connection_type_combo (GtkComboBox *combo,
 				g_free (markup);
 
 i_next:
-				if (!add_details)
+				if (!i_add_detail)
 					break;
 				i_add_detail = (++add_details)[0];
 			} while (i_add_detail);
@@ -367,9 +501,9 @@ next:
 		gtk_list_store_append (model, &iter);
 
 		if (show_headers)
-			markup = g_strdup_printf ("    %s", _("Import a saved VPN configuration..."));
+			markup = g_strdup_printf ("    %s", _("Import a saved VPN configuration…"));
 		else
-			markup = g_strdup (_("Import a saved VPN configuration..."));
+			markup = g_strdup (_("Import a saved VPN configuration…"));
 		gtk_list_store_append (model, &iter);
 		gtk_list_store_set (model, &iter,
 		                    COL_MARKUP, markup,
@@ -390,7 +524,8 @@ typedef struct {
 } NewConnectionData;
 
 static void
-new_connection_result (NMConnection *connection,
+new_connection_result (FUNC_TAG_PAGE_NEW_CONNECTION_RESULT_IMPL,
+                       NMConnection *connection, /* allow-none, don't transfer reference, allow-keep */
                        gboolean canceled,
                        GError *error,
                        gpointer user_data)
@@ -412,13 +547,14 @@ new_connection_result (NMConnection *connection,
 		                            (error && error->message) ? error->message : default_message);
 	}
 
-	result_func (connection, user_data);
+	result_func (FUNC_TAG_NEW_CONNECTION_RESULT_CALL, connection, user_data);
 }
 
 void
 new_connection_of_type (GtkWindow *parent_window,
                         const char *detail,
                         gpointer detail_data,
+                        NMConnection *connection,
                         NMClient *client,
                         PageNewConnectionFunc new_func,
                         NewConnectionResultFunc result_func,
@@ -432,9 +568,11 @@ new_connection_of_type (GtkWindow *parent_window,
 	ncd->result_func = result_func;
 	ncd->user_data = user_data;
 
-	new_func (parent_window,
+	new_func (FUNC_TAG_PAGE_NEW_CONNECTION_CALL,
+	          parent_window,
 	          detail,
 	          detail_data,
+	          connection,
 	          client,
 	          new_connection_result,
 	          ncd);
@@ -478,13 +616,14 @@ new_connection_dialog_full (GtkWindow *parent_window,
 	gpointer detail_data = NULL;
 	GError *error = NULL;
 	CEPageVpnDetailData vpn_data;
+	GtkButton *create_button;
 
 	/* load GUI */
 	gui = gtk_builder_new ();
-	if (!gtk_builder_add_from_file (gui,
-	                                UIDIR "/ce-new-connection.ui",
-	                                &error)) {
-		g_warning ("Couldn't load builder file: %s", error->message);
+	if (!gtk_builder_add_from_resource (gui,
+	                                    "/org/gnome/nm_connection_editor/ce-new-connection.ui",
+	                                    &error)) {
+		g_warning ("Couldn't load builder resource: %s", error->message);
 		g_error_free (error);
 		g_object_unref (gui);
 		return;
@@ -495,7 +634,12 @@ new_connection_dialog_full (GtkWindow *parent_window,
 
 	combo = GTK_COMBO_BOX (gtk_builder_get_object (gui, "new_connection_type_combo"));
 	label = GTK_LABEL (gtk_builder_get_object (gui, "new_connection_desc_label"));
+	create_button = GTK_BUTTON (gtk_builder_get_object (gui, "create_button"));
 	set_up_connection_type_combo (combo, label, type_filter_func, user_data);
+
+	/* Disable "Create" button if no item is available */
+	if (!gtk_tree_model_iter_n_children (gtk_combo_box_get_model (combo), NULL))
+		gtk_widget_set_sensitive (GTK_WIDGET (create_button), FALSE);
 
 	if (primary_label) {
 		label = GTK_LABEL (gtk_builder_get_object (gui, "new_connection_primary_label"));
@@ -508,30 +652,38 @@ new_connection_dialog_full (GtkWindow *parent_window,
 
 	response = gtk_dialog_run (type_dialog);
 	if (response == GTK_RESPONSE_OK) {
-		gtk_combo_box_get_active_iter (combo, &iter);
-		gtk_tree_model_get (gtk_combo_box_get_model (combo), &iter,
-		                    COL_NEW_FUNC, &new_func,
-		                    COL_VPN_SERVICE_TYPE, &vpn_service_type,
-		                    COL_VPN_ADD_DETAIL_KEY, &vpn_add_detail_key,
-		                    COL_VPN_ADD_DETAIL_VAL, &vpn_add_detail_val,
-		                    -1);
-		if (vpn_service_type) {
-			memset (&vpn_data, 0, sizeof (vpn_data));
-			vpn_data.add_detail_key = vpn_add_detail_key;
-			vpn_data.add_detail_val = vpn_add_detail_val;
+		if (gtk_combo_box_get_active_iter (combo, &iter)) {
+			gtk_tree_model_get (gtk_combo_box_get_model (combo), &iter,
+			                    COL_NEW_FUNC, &new_func,
+			                    COL_VPN_SERVICE_TYPE, &vpn_service_type,
+			                    COL_VPN_ADD_DETAIL_KEY, &vpn_add_detail_key,
+			                    COL_VPN_ADD_DETAIL_VAL, &vpn_add_detail_val,
+			                    -1);
+			if (vpn_service_type) {
+				memset (&vpn_data, 0, sizeof (vpn_data));
+				vpn_data.add_detail_key = vpn_add_detail_key;
+				vpn_data.add_detail_val = vpn_add_detail_val;
 
-			detail = vpn_service_type;
-			detail_data = &vpn_data;
+				detail = vpn_service_type;
+				detail_data = &vpn_data;
+			}
 		}
 	}
 
 	gtk_widget_destroy (GTK_WIDGET (type_dialog));
 	g_object_unref (gui);
 
-	if (new_func)
-		new_connection_of_type (parent_window, detail, detail_data, client, new_func, result_func, user_data);
-	else
-		result_func (NULL, user_data);
+	if (new_func) {
+		new_connection_of_type (parent_window,
+		                        detail,
+		                        detail_data,
+		                        NULL,
+		                        client,
+		                        new_func,
+		                        result_func,
+		                        user_data);
+	} else
+		result_func (FUNC_TAG_NEW_CONNECTION_RESULT_CALL, NULL, user_data);
 }
 
 typedef struct {
@@ -570,7 +722,7 @@ delete_cb (GObject *connection,
 	g_clear_error (&error);
 
 	if (result_func)
-		(*result_func) (NM_REMOTE_CONNECTION (connection), error == NULL, user_data);
+		(*result_func) (FUNC_TAG_DELETE_CONNECTION_RESULT_CALL, NM_REMOTE_CONNECTION (connection), error == NULL, user_data);
 }
 
 void
@@ -604,8 +756,8 @@ delete_connection (GtkWindow *parent_window,
 	                                 _("Are you sure you wish to delete the connection %s?"),
 	                                 id);
 	gtk_dialog_add_buttons (GTK_DIALOG (dialog),
-	                        GTK_STOCK_CANCEL, GTK_RESPONSE_CANCEL,
-	                        GTK_STOCK_DELETE, GTK_RESPONSE_YES,
+	                        _("_Cancel"), GTK_RESPONSE_CANCEL,
+	                        _("_Delete"), GTK_RESPONSE_YES,
 	                        NULL);
 
 	result = gtk_dialog_run (GTK_DIALOG (dialog));
@@ -624,6 +776,17 @@ delete_connection (GtkWindow *parent_window,
 		nm_connection_editor_set_busy (editor, TRUE);
 
 	nm_remote_connection_delete_async (connection, NULL, delete_cb, info);
+}
+
+gboolean
+connection_supports_proxy (NMConnection *connection)
+{
+	NMSettingConnection *s_con;
+
+	g_return_val_if_fail (NM_IS_CONNECTION (connection), FALSE);
+
+	s_con = nm_connection_get_setting_connection (connection);
+	return (nm_setting_connection_get_slave_type (s_con) == NULL);
 }
 
 gboolean

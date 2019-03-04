@@ -57,7 +57,7 @@ dialog_set_security (NMConnection *connection,
 	GList *iter;
 	WirelessSecurity *security;
 
-	security = (WirelessSecurity *) ws_wpa_eap_new (connection, FALSE, TRUE);
+	security = (WirelessSecurity *) ws_wpa_eap_new (connection, FALSE, TRUE, NULL);
 
 	/* Remove any previous wireless security widgets */
 	children = gtk_container_get_children (GTK_CONTAINER (box));
@@ -80,8 +80,8 @@ nma_ethernet_dialog_new (NMConnection *connection)
 
 	builder = gtk_builder_new ();
 
-	if (!gtk_builder_add_from_file (builder, UIDIR "/8021x.ui", &error)) {
-		g_warning ("Couldn't load builder file: %s", error->message);
+	if (!gtk_builder_add_from_resource (builder, "/org/freedesktop/network-manager-applet/8021x.ui", &error)) {
+		g_warning ("Couldn't load builder resource: %s", error->message);
 		g_error_free (error);
 		applet_missing_ui_warning_dialog_show ();
 		g_object_unref (builder);

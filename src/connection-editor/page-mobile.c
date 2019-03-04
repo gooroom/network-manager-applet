@@ -17,7 +17,7 @@
  * with this program; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
- * Copyright 2008 - 2014 Red Hat, Inc.
+ * Copyright 2008 - 2017 Red Hat, Inc.
  */
 
 #include "nm-default.h"
@@ -250,13 +250,10 @@ apn_filter_cb (GtkEditable *editable,
 }
 
 static void
-finish_setup (CEPageMobile *self, gpointer unused, GError *error, gpointer user_data)
+finish_setup (CEPageMobile *self, gpointer user_data)
 {
 	CEPage *parent = CE_PAGE (self);
 	CEPageMobilePrivate *priv = CE_PAGE_MOBILE_GET_PRIVATE (self);
-
-	if (error)
-		return;
 
 	if (NM_IS_SETTING_GSM (priv->setting))
 		populate_gsm_ui (self, parent->connection);
@@ -303,7 +300,7 @@ ce_page_mobile_new (NMConnectionEditor *editor,
 	                                    connection,
 	                                    parent_window,
 	                                    client,
-	                                    UIDIR "/ce-page-mobile.ui",
+	                                    "/org/gnome/nm_connection_editor/ce-page-mobile.ui",
 	                                    "MobilePage",
 	                                    _("Mobile Broadband")));
 	if (!self) {
@@ -329,7 +326,7 @@ ce_page_mobile_new (NMConnectionEditor *editor,
 		return NULL;
 	}
 
-	g_signal_connect (self, "initialized", G_CALLBACK (finish_setup), NULL);
+	g_signal_connect (self, CE_PAGE_INITIALIZED, G_CALLBACK (finish_setup), NULL);
 
 	return CE_PAGE (self);
 }
@@ -427,9 +424,10 @@ ce_page_mobile_class_init (CEPageMobileClass *mobile_class)
 }
 
 typedef struct {
-    NMClient *client;
-    PageNewConnectionResultFunc result_func;
-    gpointer user_data;
+	NMClient *client;
+	PageNewConnectionResultFunc result_func;
+	gpointer user_data;
+	NMConnection *connection;
 } WizardInfo;
 
 static void
@@ -439,7 +437,6 @@ new_connection_mobile_wizard_done (NMAMobileWizard *wizard,
                                    gpointer user_data)
 {
 	WizardInfo *info = user_data;
-	NMConnection *connection = NULL;
 
 	if (!canceled && method) {
 		NMSetting *type_setting;
@@ -477,19 +474,26 @@ new_connection_mobile_wizard_done (NMAMobileWizard *wizard,
 			detail = g_strdup_printf ("%s %s %%d", method->provider_name, method->plan_name);
 		else
 			detail = g_strdup_printf ("%s connection %%d", method->provider_name);
-		connection = ce_page_new_connection (detail, ctype, FALSE, info->client, info->user_data);
+
+		_ensure_connection_own (&info->connection);
+		ce_page_complete_connection (info->connection,
+		                             detail,
+		                             ctype,
+		                             FALSE,
+		                             info->client);
 		g_free (detail);
 
-		nm_connection_add_setting (connection, type_setting);
-		nm_connection_add_setting (connection, nm_setting_ppp_new ());
+		nm_connection_add_setting (info->connection, type_setting);
+		nm_connection_add_setting (info->connection, nm_setting_ppp_new ());
 	}
 
-	(*info->result_func) (connection, canceled, NULL, info->user_data);
+	(*info->result_func) (FUNC_TAG_PAGE_NEW_CONNECTION_RESULT_CALL, info->connection, canceled, NULL, info->user_data);
 
 	if (wizard)
 		nma_mobile_wizard_destroy (wizard);
 
 	g_object_unref (info->client);
+	nm_g_object_unref (info->connection);
 	g_free (info);
 }
 
@@ -500,9 +504,11 @@ cancel_dialog (GtkDialog *dialog)
 }
 
 void
-mobile_connection_new (GtkWindow *parent,
+mobile_connection_new (FUNC_TAG_PAGE_NEW_CONNECTION_IMPL,
+                       GtkWindow *parent,
                        const char *detail,
                        gpointer detail_data,
+                       NMConnection *connection,
                        NMClient *client,
                        PageNewConnectionResultFunc result_func,
                        gpointer user_data)
@@ -518,6 +524,7 @@ mobile_connection_new (GtkWindow *parent,
 	info->result_func = result_func;
 	info->client = g_object_ref (client);
 	info->user_data = user_data;
+	info->connection = nm_g_object_ref (connection);
 
 	wizard = nma_mobile_wizard_new (parent, NULL, NM_DEVICE_MODEM_CAPABILITY_NONE, FALSE,
 	                                new_connection_mobile_wizard_done, info);
@@ -530,9 +537,9 @@ mobile_connection_new (GtkWindow *parent,
 	dialog = gtk_dialog_new_with_buttons (_("Select Mobile Broadband Provider Type"),
 	                                      parent,
 	                                      GTK_DIALOG_MODAL,
-	                                      GTK_STOCK_CANCEL,
+	                                      _("_Cancel"),
 	                                      GTK_RESPONSE_CANCEL,
-	                                      GTK_STOCK_OK,
+	                                      _("_OK"),
 	                                      GTK_RESPONSE_OK,
 	                                      NULL);
 	g_signal_connect (dialog, "delete-event", G_CALLBACK (cancel_dialog), NULL);
@@ -554,7 +561,7 @@ mobile_connection_new (GtkWindow *parent,
 	vbox = gtk_box_new (GTK_ORIENTATION_VERTICAL, 6);
 	gtk_box_pack_start (GTK_BOX (hbox), vbox, TRUE, FALSE, 0);
 
-	label = gtk_label_new (_("Select the technology your mobile broadband provider uses.  If you are unsure, ask your provider."));
+	label = gtk_label_new (_("Select the technology your mobile broadband provider uses. If you are unsure, ask your provider."));
 	gtk_misc_set_alignment (GTK_MISC (label), 0, 0.5);
 	gtk_label_set_line_wrap (GTK_LABEL (label), TRUE);
 	gtk_box_pack_start (GTK_BOX (vbox), label, FALSE, FALSE, 12);
@@ -563,9 +570,9 @@ mobile_connection_new (GtkWindow *parent,
 	gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (gsm_radio), TRUE);
 	gtk_box_pack_start (GTK_BOX (vbox), gsm_radio, FALSE, FALSE, 6);
 
-	/* Translators: CDMA has 'D' accelerator key; 'C' collides with 'Cancel' button.
-	                You may need to change it according to your language. */
 	cdma_radio = gtk_radio_button_new_with_mnemonic_from_widget (GTK_RADIO_BUTTON (gsm_radio),
+                                           /* Translators: CDMA has 'D' accelerator key; 'C' collides with 'Cancel' button.
+                                                           You may need to change it according to your language. */
                                            _("My provider uses C_DMA-based technology (i.e. 1xRTT, EVDO)"));
 	gtk_box_pack_start (GTK_BOX (vbox), cdma_radio, FALSE, FALSE, 6);
 
