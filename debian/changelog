@@ -1,3 +1,37 @@
+network-manager-applet (1.8.22-2ubuntu1) eoan; urgency=medium
+
+  * Resynchronize on Debian
+
+ -- Sebastien Bacher <seb128@ubuntu.com>  Thu, 30 May 2019 13:01:16 +0200
+
+network-manager-applet (1.8.22-2) unstable; urgency=medium
+
+  * Upload to unstable
+
+ -- Michael Biebl <biebl@debian.org>  Thu, 11 Jul 2019 00:44:50 +0200
+
+network-manager-applet (1.8.22-1) experimental; urgency=medium
+
+  * New upstream version 1.8.22
+  * Rebase patches
+  * Update symbols file for libnma0
+  * Drop obsolete gnome-common Build-Depends
+  * Replace intltool Build-Depends with gettext (>= 0.18)
+
+ -- Michael Biebl <biebl@debian.org>  Wed, 29 May 2019 12:58:48 +0200
+
+network-manager-applet (1.8.20-1ubuntu2) eoan; urgency=medium
+
+  * debian/control.in, debian/libnm-gtk*, debian/rules:
+    - Remove deprecated libnm-gtk0/libnm-gtk-dev, following Debian,
+      unity-control-centerwas ported to newer iibraries now.
+  * debian/compat, debian/control:
+    - Remove delta to stay on debhelper 11
+  * debian/patches/Allow-to-create-and-connect-to-Ad-Hoc-RSN-networks.patch:
+    - remove, the n-m side was dropped in zesty
+
+ -- Sebastien Bacher <seb128@ubuntu.com>  Wed, 22 May 2019 15:01:28 +0200
+
 network-manager-applet (1.8.20-1ubuntu1) disco; urgency=medium
 
   * Resynchronize on Debian
@@ -16,6 +50,14 @@ network-manager-applet (1.8.20-1ubuntu1) disco; urgency=medium
       upstream but we still have unity-control-center depending on it.
 
  -- Sebastien Bacher <seb128@ubuntu.com>  Mon, 04 Mar 2019 16:17:00 +0100
+
+network-manager-applet (1.8.20-1.1) unstable; urgency=medium
+
+  * Non-maintainer upload.
+  * Fix crash on creating custom Wi-Fi connection in wifi-dialog.
+    (Closes: #926328)
+
+ -- Boyuan Yang <byang@debian.org>  Fri, 19 Apr 2019 13:27:26 -0400
 
 network-manager-applet (1.8.20-1) unstable; urgency=medium
 
