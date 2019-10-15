@@ -42,8 +42,15 @@ typedef struct {
 	GtkSpinButton *forward_delay;
 	GtkSpinButton *hello_time;
 	GtkSpinButton *max_age;
+	GtkSpinButton *group_fwd_mask;
+	GtkLabel *group_fwd_mask_label;
 
 } CEPageBridgePrivate;
+
+/* The group_fwd_mask property is available in libnm 1.10, but since we only
+ * require 1.8 at the moment, enable it only when detected at runtime.
+ */
+static gboolean group_fwd_mask_supported;
 
 static void
 bridge_private_init (CEPageBridge *self)
@@ -60,6 +67,8 @@ bridge_private_init (CEPageBridge *self)
 	priv->forward_delay = GTK_SPIN_BUTTON (gtk_builder_get_object (builder, "bridge_forward_delay"));
 	priv->hello_time = GTK_SPIN_BUTTON (gtk_builder_get_object (builder, "bridge_hello_time"));
 	priv->max_age = GTK_SPIN_BUTTON (gtk_builder_get_object (builder, "bridge_max_age"));
+	priv->group_fwd_mask = GTK_SPIN_BUTTON (gtk_builder_get_object (builder, "bridge_group_fwd_mask"));
+	priv->group_fwd_mask_label = GTK_LABEL (gtk_builder_get_object (builder, "bridge_group_fwd_mask_label"));
 
 	priv->toplevel = GTK_WINDOW (gtk_widget_get_ancestor (GTK_WIDGET (priv->stp),
 	                                                      GTK_TYPE_WINDOW));
@@ -97,8 +106,11 @@ populate_ui (CEPageBridge *self)
 	CEPageBridgePrivate *priv = CE_PAGE_BRIDGE_GET_PRIVATE (self);
 	NMSettingBridge *s_bridge = priv->setting;
 	gboolean stp, mcast_snoop;
-	int priority, forward_delay, hello_time, max_age;
-	int ageing_time;
+	int priority, forward_delay, hello_time, max_age, ageing_time;
+	guint32 group_fwd_mask;
+
+	gtk_widget_set_visible (GTK_WIDGET (priv->group_fwd_mask), group_fwd_mask_supported);
+	gtk_widget_set_visible (GTK_WIDGET (priv->group_fwd_mask_label), group_fwd_mask_supported);
 
 	/* Ageing time */
 	ageing_time = nm_setting_bridge_get_ageing_time (s_bridge);
@@ -147,6 +159,15 @@ populate_ui (CEPageBridge *self)
 	g_signal_connect (priv->max_age, "value-changed",
 	                  G_CALLBACK (stuff_changed),
 	                  self);
+
+	/* Group forward mask */
+	if (group_fwd_mask_supported) {
+		g_object_get (s_bridge, "group-forward-mask", &group_fwd_mask, NULL);
+		gtk_spin_button_set_value (priv->group_fwd_mask, (gdouble) group_fwd_mask);
+		g_signal_connect (priv->group_fwd_mask, "value-changed",
+		                  G_CALLBACK (stuff_changed),
+		                  self);
+	}
 }
 
 static void
@@ -162,7 +183,9 @@ create_connection (CEPageMaster *master, NMConnection *connection)
 }
 
 static gboolean
-connection_type_filter (GType type, gpointer user_data)
+connection_type_filter (FUNC_TAG_NEW_CONNECTION_TYPE_FILTER_IMPL,
+                        GType type,
+                        gpointer self)
 {
 	return nm_utils_check_virtual_device_compatibility (NM_TYPE_SETTING_BRIDGE, type);
 }
@@ -181,11 +204,8 @@ add_slave (CEPageMaster *master, NewConnectionResultFunc result_func)
 }
 
 static void
-finish_setup (CEPageBridge *self, gpointer unused, GError *error, gpointer user_data)
+finish_setup (CEPageBridge *self, gpointer user_data)
 {
-	if (error)
-		return;
-
 	populate_ui (self);
 }
 
@@ -205,7 +225,7 @@ ce_page_bridge_new (NMConnectionEditor *editor,
 	                                  connection,
 	                                  parent_window,
 	                                  client,
-	                                  UIDIR "/ce-page-bridge.ui",
+	                                  "/org/gnome/nm_connection_editor/ce-page-bridge.ui",
 	                                  "BridgePage",
 	                                  _("Bridge")));
 	if (!self) {
@@ -223,7 +243,7 @@ ce_page_bridge_new (NMConnectionEditor *editor,
 		nm_connection_add_setting (connection, NM_SETTING (priv->setting));
 	}
 
-	g_signal_connect (self, "initialized", G_CALLBACK (finish_setup), NULL);
+	g_signal_connect (self, CE_PAGE_INITIALIZED, G_CALLBACK (finish_setup), NULL);
 
 	return CE_PAGE (self);
 }
@@ -232,7 +252,7 @@ static void
 ui_to_setting (CEPageBridge *self)
 {
 	CEPageBridgePrivate *priv = CE_PAGE_BRIDGE_GET_PRIVATE (self);
-	int ageing_time, priority, forward_delay, hello_time, max_age;
+	int ageing_time, priority, forward_delay, hello_time, max_age, group_fwd_mask;
 	gboolean stp, mcast_snoop;
 
 	ageing_time = gtk_spin_button_get_value_as_int (priv->ageing_time);
@@ -243,6 +263,13 @@ ui_to_setting (CEPageBridge *self)
 	              NM_SETTING_BRIDGE_MULTICAST_SNOOPING, mcast_snoop,
 	              NM_SETTING_BRIDGE_STP, stp,
 	              NULL);
+
+	if (group_fwd_mask_supported) {
+		group_fwd_mask = gtk_spin_button_get_value_as_int (priv->group_fwd_mask);
+		g_object_set (G_OBJECT (priv->setting),
+		              "group-forward-mask", (guint32) group_fwd_mask,
+		              NULL);
+	}
 
 	if (stp) {
 		priority = gtk_spin_button_get_value_as_int (priv->priority);
@@ -283,6 +310,7 @@ ce_page_bridge_class_init (CEPageBridgeClass *bridge_class)
 	GObjectClass *object_class = G_OBJECT_CLASS (bridge_class);
 	CEPageClass *parent_class = CE_PAGE_CLASS (bridge_class);
 	CEPageMasterClass *master_class = CE_PAGE_MASTER_CLASS (bridge_class);
+	GObjectClass *setting_class;
 
 	g_type_class_add_private (object_class, sizeof (CEPageBridgePrivate));
 
@@ -290,29 +318,38 @@ ce_page_bridge_class_init (CEPageBridgeClass *bridge_class)
 	parent_class->ce_page_validate_v = ce_page_validate_v;
 	master_class->create_connection = create_connection;
 	master_class->add_slave = add_slave;
+
+	/* check whether libnm supports the bridge.group-forward-mask property */
+	setting_class = g_type_class_ref (NM_TYPE_SETTING_BRIDGE);
+	group_fwd_mask_supported = !!g_object_class_find_property (setting_class,
+	                                                           "group-forward-mask");
+	g_type_class_unref (setting_class);
 }
 
 void
-bridge_connection_new (GtkWindow *parent,
+bridge_connection_new (FUNC_TAG_PAGE_NEW_CONNECTION_IMPL,
+                       GtkWindow *parent,
                        const char *detail,
                        gpointer detail_data,
+                       NMConnection *connection,
                        NMClient *client,
                        PageNewConnectionResultFunc result_func,
                        gpointer user_data)
 {
-	NMConnection *connection;
 	NMSettingConnection *s_con;
 	int bridge_num = 0, num, i;
 	const GPtrArray *connections;
 	NMConnection *conn2;
 	const char *iface;
 	char *my_iface;
+	gs_unref_object NMConnection *connection_tmp = NULL;
 
-	connection = ce_page_new_connection (_("Bridge connection %d"),
-	                                     NM_SETTING_BRIDGE_SETTING_NAME,
-	                                     TRUE,
-	                                     client,
-	                                     user_data);
+	connection = _ensure_connection_other (connection, &connection_tmp);
+	ce_page_complete_connection (connection,
+	                             _("Bridge connection %d"),
+	                             NM_SETTING_BRIDGE_SETTING_NAME,
+	                             TRUE,
+	                             client);
 	nm_connection_add_setting (connection, nm_setting_bridge_new ());
 
 	/* Find an available interface name */
@@ -338,6 +375,5 @@ bridge_connection_new (GtkWindow *parent,
 	              NULL);
 	g_free (my_iface);
 
-	(*result_func) (connection, FALSE, NULL, user_data);
+	(*result_func) (FUNC_TAG_PAGE_NEW_CONNECTION_RESULT_CALL, connection, FALSE, NULL, user_data);
 }
-

@@ -502,6 +502,12 @@ enable_toggled_cb (GtkToggleButton *button, EnableInfo *info)
 }
 
 static void
+free_enable_info (gpointer data, GClosure *closure)
+{
+	g_free (data);
+}
+
+static void
 feature_setup (CEPageDcb *self, NMSettingDcb *s_dcb, const Feature *f)
 {
 	CEPage *parent = CE_PAGE (self);
@@ -521,8 +527,7 @@ feature_setup (CEPageDcb *self, NMSettingDcb *s_dcb, const Feature *f)
 	info = g_malloc0 (sizeof (EnableInfo));
 	info->f = f;
 	info->page = parent;
-	g_signal_connect (widget, "toggled", G_CALLBACK (enable_toggled_cb), info);
-	g_object_weak_ref (G_OBJECT (widget), (GWeakNotify) g_free, info);
+	g_signal_connect_data (widget, "toggled", G_CALLBACK (enable_toggled_cb), info, free_enable_info, 0);
 
 	/* Advertise */
 	widget = get_widget (parent->builder, f->prefix, "_advertise_checkbutton");
@@ -581,15 +586,12 @@ enable_toggled (GtkToggleButton *button, gpointer user_data)
 }
 
 static void
-finish_setup (CEPageDcb *self, gpointer unused, GError *error, gpointer user_data)
+finish_setup (CEPageDcb *self, gpointer user_data)
 {
 	CEPage *parent = CE_PAGE (self);
 	CEPageDcbPrivate *priv = CE_PAGE_DCB_GET_PRIVATE (self);
 	NMSettingDcb *s_dcb = nm_connection_get_setting_dcb (parent->connection);
 	guint i;
-
-	if (error)
-		return;
 
 	gtk_toggle_button_set_active (priv->enabled, priv->initial_have_dcb);
 	g_signal_connect (priv->enabled, "toggled", G_CALLBACK (enable_toggled), self);
@@ -617,7 +619,7 @@ ce_page_dcb_new (NMConnectionEditor *editor,
 	                                 connection,
 	                                 parent_window,
 	                                 client,
-	                                 UIDIR "/ce-page-dcb.ui",
+	                                 "/org/gnome/nm_connection_editor/ce-page-dcb.ui",
 	                                 "DcbPage",
 	                                 _("DCB")));
 	if (!self) {
@@ -638,7 +640,7 @@ ce_page_dcb_new (NMConnectionEditor *editor,
 	} else
 		priv->options = (NMSettingDcb *) nm_setting_dcb_new ();
 
-	g_signal_connect (self, "initialized", G_CALLBACK (finish_setup), NULL);
+	g_signal_connect (self, CE_PAGE_INITIALIZED, G_CALLBACK (finish_setup), NULL);
 
 	return CE_PAGE (self);
 }

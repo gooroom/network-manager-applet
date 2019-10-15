@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- Generated with glade 3.20.0 -->
-<interface>
-  <requires lib="gtk+" version="3.4"/>
+<!-- Generated with glade 3.22.1 -->
+<interface domain="nm-applet">
+  <requires lib="gtk+" version="3.10"/>
   <object class="GtkListStore" id="agg_select_policy_model">
     <columns>
       <!-- column-name type -->
@@ -160,16 +160,20 @@
     <property name="can_focus">False</property>
     <property name="hexpand">True</property>
     <property name="vexpand">True</property>
-    <property name="border_width">12</property>
+    <property name="margin_start">12</property>
+    <property name="margin_end">12</property>
+    <property name="margin_top">12</property>
+    <property name="margin_bottom">12</property>
     <property name="row_spacing">8</property>
-    <property name="column_spacing">12</property>
+    <property name="column_spacing">6</property>
     <child>
       <object class="GtkLabel" id="master_connections_label">
         <property name="visible">True</property>
         <property name="can_focus">False</property>
         <property name="halign">start</property>
-        <property name="label" translatable="yes">_Teamed connections:</property>
+        <property name="label" translatable="yes">_Teamed connections</property>
         <property name="use_underline">True</property>
+        <property name="xalign">1</property>
       </object>
       <packing>
         <property name="left_attach">0</property>
@@ -178,7 +182,8 @@
       </packing>
     </child>
     <child>
-      <object class="GtkHBox" id="hbox2">
+      <object class="GtkBox" id="hbox2">
+        <property name="orientation">horizontal</property>
         <property name="visible">True</property>
         <property name="can_focus">False</property>
         <property name="hexpand">True</property>
@@ -284,8 +289,10 @@
         <property name="visible">True</property>
         <property name="can_focus">False</property>
         <property name="halign">start</property>
-        <property name="label" translatable="yes">_Interface name:</property>
+        <property name="label" translatable="yes">_Interface name</property>
         <property name="use_underline">True</property>
+        <property name="mnemonic_widget">master_interface</property>
+        <property name="xalign">1</property>
       </object>
       <packing>
         <property name="left_attach">0</property>
@@ -309,9 +316,10 @@
         <property name="visible">True</property>
         <property name="can_focus">False</property>
         <property name="halign">start</property>
-        <property name="label" translatable="yes">_MTU:</property>
+        <property name="label" translatable="yes">_MTU</property>
         <property name="use_underline">True</property>
         <property name="mnemonic_widget">team_mtu</property>
+        <property name="xalign">1</property>
       </object>
       <packing>
         <property name="left_attach">0</property>
@@ -319,7 +327,8 @@
       </packing>
     </child>
     <child>
-      <object class="GtkHBox" id="team_mtu_box">
+      <object class="GtkBox" id="team_mtu_box">
+        <property name="orientation">horizontal</property>
         <property name="visible">True</property>
         <property name="can_focus">False</property>
         <property name="hexpand">True</property>
@@ -388,7 +397,7 @@
               <object class="GtkLabel">
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
-                <property name="label" translatable="yes">Ad_vanced...</property>
+                <property name="label" translatable="yes">Ad_vanced…</property>
                 <property name="use_underline">True</property>
               </object>
               <packing>
@@ -516,6 +525,9 @@
     <property name="can_focus">False</property>
     <property name="title" translatable="yes">Team Advanced Options</property>
     <property name="type_hint">dialog</property>
+    <child>
+      <placeholder/>
+    </child>
     <child internal-child="vbox">
       <object class="GtkBox" id="advanced_dialog_box">
         <property name="can_focus">False</property>
@@ -524,8 +536,8 @@
         <child internal-child="action_area">
           <object class="GtkButtonBox" id="advanced_buttons">
             <property name="can_focus">False</property>
-            <property name="margin_left">6</property>
-            <property name="margin_right">6</property>
+            <property name="margin_start">6</property>
+            <property name="margin_end">6</property>
             <property name="margin_top">6</property>
             <property name="margin_bottom">6</property>
             <property name="layout_style">end</property>
@@ -568,8 +580,8 @@
           <object class="GtkNotebook" id="advanced_notebook">
             <property name="visible">True</property>
             <property name="can_focus">True</property>
-            <property name="margin_left">6</property>
-            <property name="margin_right">6</property>
+            <property name="margin_start">6</property>
+            <property name="margin_end">6</property>
             <property name="margin_top">6</property>
             <property name="margin_bottom">6</property>
             <child>
@@ -577,7 +589,10 @@
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
                 <property name="valign">start</property>
-                <property name="border_width">12</property>
+                <property name="margin_start">12</property>
+                <property name="margin_end">12</property>
+                <property name="margin_top">12</property>
+                <property name="margin_bottom">12</property>
                 <property name="row_spacing">6</property>
                 <property name="column_spacing">6</property>
                 <child>
@@ -585,10 +600,10 @@
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
                     <property name="halign">start</property>
-                    <property name="hexpand">True</property>
-                    <property name="label" translatable="yes">_Peer notification count:</property>
+                    <property name="label" translatable="yes">_Peer notification count</property>
                     <property name="use_underline">True</property>
                     <property name="mnemonic_widget">notify_peers_count</property>
+                    <property name="xalign">1</property>
                   </object>
                   <packing>
                     <property name="left_attach">0</property>
@@ -600,10 +615,10 @@
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
                     <property name="halign">start</property>
-                    <property name="hexpand">True</property>
-                    <property name="label" translatable="yes">Peer _notification interval:</property>
+                    <property name="label" translatable="yes">Peer _notification interval</property>
                     <property name="use_underline">True</property>
                     <property name="mnemonic_widget">notify_peers_interval</property>
+                    <property name="xalign">1</property>
                   </object>
                   <packing>
                     <property name="left_attach">0</property>
@@ -615,10 +630,10 @@
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
                     <property name="halign">start</property>
-                    <property name="hexpand">True</property>
-                    <property name="label" translatable="yes">_Multicast rejoin count:</property>
+                    <property name="label" translatable="yes">_Multicast rejoin count</property>
                     <property name="use_underline">True</property>
                     <property name="mnemonic_widget">mcast_rejoin_count</property>
+                    <property name="xalign">1</property>
                   </object>
                   <packing>
                     <property name="left_attach">0</property>
@@ -630,10 +645,10 @@
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
                     <property name="halign">start</property>
-                    <property name="hexpand">True</property>
-                    <property name="label" translatable="yes">Multicast _rejoin interval:</property>
+                    <property name="label" translatable="yes">Multicast _rejoin interval</property>
                     <property name="use_underline">True</property>
                     <property name="mnemonic_widget">mcast_rejoin_interval</property>
+                    <property name="xalign">1</property>
                   </object>
                   <packing>
                     <property name="left_attach">0</property>
@@ -721,9 +736,9 @@
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
                     <property name="halign">start</property>
-                    <property name="hexpand">True</property>
-                    <property name="label" translatable="yes">_Hardware Address:</property>
+                    <property name="label" translatable="yes">_Hardware Address</property>
                     <property name="use_underline">True</property>
+                    <property name="xalign">1</property>
                   </object>
                   <packing>
                     <property name="left_attach">0</property>
@@ -768,19 +783,22 @@
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
                 <property name="vexpand">True</property>
-                <property name="border_width">12</property>
+                <property name="margin_start">12</property>
+                <property name="margin_end">12</property>
+                <property name="margin_top">12</property>
+                <property name="margin_bottom">12</property>
                 <property name="row_spacing">6</property>
-                <property name="column_spacing">12</property>
+                <property name="column_spacing">6</property>
                 <property name="column_homogeneous">True</property>
                 <child>
                   <object class="GtkLabel" id="team_runner_label">
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
                     <property name="halign">start</property>
-                    <property name="hexpand">True</property>
-                    <property name="label" translatable="yes">_Runner:</property>
+                    <property name="label" translatable="yes">_Runner</property>
                     <property name="use_underline">True</property>
                     <property name="mnemonic_widget">team_runner</property>
+                    <property name="xalign">1</property>
                   </object>
                   <packing>
                     <property name="left_attach">0</property>
@@ -792,10 +810,10 @@
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
                     <property name="halign">start</property>
-                    <property name="hexpand">True</property>
-                    <property name="label" translatable="yes">_Hardware address policy:</property>
+                    <property name="label" translatable="yes">_Hardware address policy</property>
                     <property name="use_underline">True</property>
                     <property name="mnemonic_widget">hwaddr_policy</property>
+                    <property name="xalign">1</property>
                   </object>
                   <packing>
                     <property name="left_attach">0</property>
@@ -807,6 +825,7 @@
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
                     <property name="tooltip_text" translatable="yes">Name of runner to be used.</property>
+                    <property name="hexpand">True</property>
                     <property name="model">team_runner_model</property>
                     <property name="active">0</property>
                     <property name="id_column">0</property>
@@ -826,7 +845,7 @@
                   <object class="GtkComboBox" id="hwaddr_policy">
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
-                    <property name="tooltip_text" translatable="yes">This  defines the policy of how hardware addresses of team device and port devices should be set during the team lifetime.</property>
+                    <property name="tooltip_text" translatable="yes">This defines the policy of how hardware addresses of team device and port devices should be set during the team lifetime.</property>
                     <property name="model">hwaddr_policy_model</property>
                     <property name="active">0</property>
                     <property name="id_column">0</property>
@@ -848,7 +867,7 @@
                     <property name="visible">True</property>
                     <property name="can_focus">True</property>
                     <property name="receives_default">False</property>
-                    <property name="tooltip_text" translatable="yes">If checked, LACPDU frames are sent along the configured links periodically. If not, it acts as "speak when spoken to".</property>
+                    <property name="tooltip_text" translatable="yes">If checked, LACPDU frames are sent along the configured links periodically. If not, it acts as “speak when spoken to”.</property>
                     <property name="halign">start</property>
                     <property name="use_underline">True</property>
                     <property name="draw_indicator">True</property>
@@ -865,7 +884,7 @@
                     <property name="visible">True</property>
                     <property name="can_focus">True</property>
                     <property name="receives_default">False</property>
-                    <property name="tooltip_text" translatable="yes">Option specifies the rate at which our link partner is asked to transmit LACPDU packets. If checked, packets will be sent once  per second. Otherwise they will be sent every 30 seconds.</property>
+                    <property name="tooltip_text" translatable="yes">Option specifies the rate at which our link partner is asked to transmit LACPDU packets. If checked, packets will be sent once per second. Otherwise they will be sent every 30 seconds.</property>
                     <property name="halign">start</property>
                     <property name="use_underline">True</property>
                     <property name="draw_indicator">True</property>
@@ -881,10 +900,10 @@
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
                     <property name="halign">start</property>
-                    <property name="hexpand">True</property>
-                    <property name="label" translatable="yes">_System priority:</property>
+                    <property name="label" translatable="yes">_System priority</property>
                     <property name="use_underline">True</property>
                     <property name="mnemonic_widget">system_priority</property>
+                    <property name="xalign">1</property>
                   </object>
                   <packing>
                     <property name="left_attach">0</property>
@@ -896,10 +915,10 @@
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
                     <property name="halign">start</property>
-                    <property name="hexpand">True</property>
-                    <property name="label" translatable="yes">_Minimum ports:</property>
+                    <property name="label" translatable="yes">_Minimum ports</property>
                     <property name="use_underline">True</property>
                     <property name="mnemonic_widget">minimum_ports</property>
+                    <property name="xalign">1</property>
                   </object>
                   <packing>
                     <property name="left_attach">0</property>
@@ -911,10 +930,10 @@
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
                     <property name="halign">start</property>
-                    <property name="hexpand">True</property>
-                    <property name="label" translatable="yes">_Aggregator selection policy:</property>
+                    <property name="label" translatable="yes">_Aggregator selection policy</property>
                     <property name="use_underline">True</property>
                     <property name="mnemonic_widget">agg_selection_policy</property>
+                    <property name="xalign">1</property>
                   </object>
                   <packing>
                     <property name="left_attach">0</property>
@@ -1013,7 +1032,7 @@
                       <object class="GtkLabel" id="tx_hash_label">
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
-                        <property name="label" translatable="yes">_Fields for tramsmission hash</property>
+                        <property name="label" translatable="yes">_Fields for transmission hash</property>
                         <property name="use_underline">True</property>
                         <property name="mnemonic_widget">tx_hash</property>
                       </object>
@@ -1063,10 +1082,10 @@
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
                     <property name="halign">start</property>
-                    <property name="hexpand">True</property>
-                    <property name="label" translatable="yes">Transmission _balancing interval:</property>
+                    <property name="label" translatable="yes">Transmission _balancing interval</property>
                     <property name="use_underline">True</property>
                     <property name="mnemonic_widget">tx_balancing_interval</property>
+                    <property name="xalign">1</property>
                   </object>
                   <packing>
                     <property name="left_attach">0</property>
@@ -1078,10 +1097,10 @@
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
                     <property name="halign">start</property>
-                    <property name="hexpand">True</property>
-                    <property name="label" translatable="yes">_Transmission balancer:</property>
+                    <property name="label" translatable="yes">_Transmission balancer</property>
                     <property name="use_underline">True</property>
                     <property name="mnemonic_widget">tx_balancer</property>
+                    <property name="xalign">1</property>
                   </object>
                   <packing>
                     <property name="left_attach">0</property>
@@ -1109,18 +1128,21 @@
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
                 <property name="valign">start</property>
-                <property name="border_width">12</property>
+                <property name="margin_start">12</property>
+                <property name="margin_end">12</property>
+                <property name="margin_top">12</property>
+                <property name="margin_bottom">12</property>
                 <property name="row_spacing">6</property>
-                <property name="column_spacing">12</property>
+                <property name="column_spacing">6</property>
                 <child>
                   <object class="GtkLabel" id="link_watcher_name_label">
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
                     <property name="halign">start</property>
-                    <property name="hexpand">True</property>
-                    <property name="label" translatable="yes">_Link watcher:</property>
+                    <property name="label" translatable="yes">_Link watcher</property>
                     <property name="use_underline">True</property>
                     <property name="mnemonic_widget">link_watcher_name</property>
+                    <property name="xalign">1</property>
                   </object>
                   <packing>
                     <property name="left_attach">0</property>
@@ -1132,10 +1154,10 @@
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
                     <property name="halign">start</property>
-                    <property name="hexpand">True</property>
-                    <property name="label" translatable="yes">_Up delay:</property>
+                    <property name="label" translatable="yes">_Up delay</property>
                     <property name="use_underline">True</property>
                     <property name="mnemonic_widget">delay_up</property>
+                    <property name="xalign">1</property>
                   </object>
                   <packing>
                     <property name="left_attach">0</property>
@@ -1147,10 +1169,10 @@
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
                     <property name="halign">start</property>
-                    <property name="hexpand">True</property>
-                    <property name="label" translatable="yes">_Down delay:</property>
+                    <property name="label" translatable="yes">_Down delay</property>
                     <property name="use_underline">True</property>
                     <property name="mnemonic_widget">delay_down</property>
+                    <property name="xalign">1</property>
                   </object>
                   <packing>
                     <property name="left_attach">0</property>
@@ -1162,10 +1184,10 @@
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
                     <property name="halign">start</property>
-                    <property name="hexpand">True</property>
-                    <property name="label" translatable="yes">Send _interval:</property>
+                    <property name="label" translatable="yes">Send _interval</property>
                     <property name="use_underline">True</property>
                     <property name="mnemonic_widget">send_interval</property>
+                    <property name="xalign">1</property>
                   </object>
                   <packing>
                     <property name="left_attach">0</property>
@@ -1177,10 +1199,10 @@
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
                     <property name="halign">start</property>
-                    <property name="hexpand">True</property>
-                    <property name="label" translatable="yes">Delay _before first send:</property>
+                    <property name="label" translatable="yes">Delay _before first send</property>
                     <property name="use_underline">True</property>
                     <property name="mnemonic_widget">init_wait</property>
+                    <property name="xalign">1</property>
                   </object>
                   <packing>
                     <property name="left_attach">0</property>
@@ -1192,10 +1214,10 @@
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
                     <property name="halign">start</property>
-                    <property name="hexpand">True</property>
-                    <property name="label" translatable="yes">_Maximum missed replies:</property>
+                    <property name="label" translatable="yes">_Maximum missed replies</property>
                     <property name="use_underline">True</property>
                     <property name="mnemonic_widget">missed_max</property>
+                    <property name="xalign">1</property>
                   </object>
                   <packing>
                     <property name="left_attach">0</property>
@@ -1207,10 +1229,10 @@
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
                     <property name="halign">start</property>
-                    <property name="hexpand">True</property>
-                    <property name="label" translatable="yes">_Source host:</property>
+                    <property name="label" translatable="yes">_Source host</property>
                     <property name="use_underline">True</property>
                     <property name="mnemonic_widget">source_host</property>
+                    <property name="xalign">1</property>
                   </object>
                   <packing>
                     <property name="left_attach">0</property>
@@ -1222,10 +1244,10 @@
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
                     <property name="halign">start</property>
-                    <property name="hexpand">False</property>
-                    <property name="label" translatable="yes">_Target host:</property>
+                    <property name="label" translatable="yes">_Target host</property>
                     <property name="use_underline">True</property>
                     <property name="mnemonic_widget">target_host</property>
+                    <property name="xalign">1</property>
                   </object>
                   <packing>
                     <property name="left_attach">0</property>
@@ -1483,12 +1505,15 @@
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
                 <property name="vexpand">True</property>
-                <property name="border_width">12</property>
+                <property name="margin_start">12</property>
+                <property name="margin_end">12</property>
+                <property name="margin_top">12</property>
+                <property name="margin_bottom">12</property>
                 <property name="row_spacing">8</property>
-                <property name="column_spacing">12</property>
+                <property name="column_spacing">6</property>
                 <child>
                   <object class="GtkButton" id="import_config_button">
-                    <property name="label" translatable="yes">Im_port team configuration from a file...</property>
+                    <property name="label" translatable="yes">Im_port team configuration from a file…</property>
                     <property name="visible">True</property>
                     <property name="can_focus">True</property>
                     <property name="receives_default">False</property>
@@ -1524,10 +1549,10 @@
                   <object class="GtkLabel" id="team_json_config_label">
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
-                    <property name="label" translatable="yes">Edit _JSON configuration:</property>
+                    <property name="label" translatable="yes">Edit _JSON configuration</property>
                     <property name="use_underline">True</property>
                     <property name="mnemonic_widget">team_json_config</property>
-                    <property name="xalign">0</property>
+                    <property name="xalign">1</property>
                   </object>
                   <packing>
                     <property name="left_attach">0</property>

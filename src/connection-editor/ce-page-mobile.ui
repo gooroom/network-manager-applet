@@ -1,14 +1,20 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- Generated with glade 3.16.1 -->
-<interface>
-  <requires lib="gtk+" version="3.4"/>
-  <object class="GtkVBox" id="MobilePage">
+<!-- Generated with glade 3.20.0 -->
+<interface domain="nm-applet">
+  <requires lib="gtk+" version="3.10"/>
+  <object class="GtkBox" id="MobilePage">
+    <property name="orientation">vertical</property>
     <property name="visible">True</property>
     <property name="can_focus">False</property>
-    <property name="border_width">12</property>
+    <property name="hexpand">True</property>
+    <property name="margin_start">12</property>
+    <property name="margin_end">12</property>
+    <property name="margin_top">12</property>
+    <property name="margin_bottom">12</property>
     <property name="spacing">18</property>
     <child>
-      <object class="GtkVBox" id="mobile_basic_vbox">
+      <object class="GtkBox" id="mobile_basic_vbox">
+        <property name="orientation">vertical</property>
         <property name="visible">True</property>
         <property name="can_focus">False</property>
         <property name="spacing">6</property>
@@ -16,8 +22,8 @@
           <object class="GtkLabel" id="mobile_basic_label">
             <property name="visible">True</property>
             <property name="can_focus">False</property>
-            <property name="xalign">0</property>
             <property name="label" translatable="yes">Basic</property>
+            <property name="xalign">0</property>
             <attributes>
               <attribute name="weight" value="bold"/>
             </attributes>
@@ -29,69 +35,63 @@
           </packing>
         </child>
         <child>
-          <object class="GtkTable" id="table1">
-            <property name="margin_start">12</property>
+          <object class="GtkGrid" id="table1">
             <property name="visible">True</property>
             <property name="can_focus">False</property>
-            <property name="n_rows">3</property>
-            <property name="n_columns">2</property>
-            <property name="column_spacing">12</property>
+            <property name="margin_start">12</property>
             <property name="row_spacing">6</property>
+            <property name="column_spacing">6</property>
             <child>
               <object class="GtkLabel" id="label28">
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
-                <property name="xalign">0</property>
-                <property name="label" translatable="yes">Nu_mber:</property>
+                <property name="label" translatable="yes">Nu_mber</property>
                 <property name="use_underline">True</property>
                 <property name="mnemonic_widget">mobile_number</property>
+                <property name="xalign">1</property>
               </object>
               <packing>
-                <property name="x_options">GTK_FILL</property>
-                <property name="y_options"/>
+                <property name="left_attach">0</property>
+                <property name="top_attach">0</property>
               </packing>
             </child>
             <child>
               <object class="GtkLabel" id="label24">
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
-                <property name="xalign">0</property>
-                <property name="label" translatable="yes">_Username:</property>
+                <property name="label" translatable="yes">_Username</property>
                 <property name="use_underline">True</property>
                 <property name="mnemonic_widget">mobile_username</property>
+                <property name="xalign">1</property>
               </object>
               <packing>
+                <property name="left_attach">0</property>
                 <property name="top_attach">1</property>
-                <property name="bottom_attach">2</property>
-                <property name="x_options">GTK_FILL</property>
-                <property name="y_options"/>
               </packing>
             </child>
             <child>
               <object class="GtkLabel" id="label25">
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
-                <property name="xalign">0</property>
-                <property name="label" translatable="yes">_Password:</property>
+                <property name="label" translatable="yes">_Password</property>
                 <property name="use_underline">True</property>
                 <property name="mnemonic_widget">mobile_password</property>
+                <property name="xalign">1</property>
               </object>
               <packing>
+                <property name="left_attach">0</property>
                 <property name="top_attach">2</property>
-                <property name="bottom_attach">3</property>
-                <property name="x_options">GTK_FILL</property>
-                <property name="y_options"/>
               </packing>
             </child>
             <child>
               <object class="GtkEntry" id="mobile_number">
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
+                <property name="hexpand">True</property>
               </object>
               <packing>
                 <property name="left_attach">1</property>
-                <property name="right_attach">2</property>
-                <property name="y_options"/>
+                <property name="top_attach">0</property>
               </packing>
             </child>
             <child>
@@ -101,10 +101,7 @@
               </object>
               <packing>
                 <property name="left_attach">1</property>
-                <property name="right_attach">2</property>
                 <property name="top_attach">1</property>
-                <property name="bottom_attach">2</property>
-                <property name="y_options"/>
               </packing>
             </child>
             <child>
@@ -115,10 +112,7 @@
               </object>
               <packing>
                 <property name="left_attach">1</property>
-                <property name="right_attach">2</property>
                 <property name="top_attach">2</property>
-                <property name="bottom_attach">3</property>
-                <property name="y_options"/>
               </packing>
             </child>
           </object>
@@ -136,7 +130,8 @@
       </packing>
     </child>
     <child>
-      <object class="GtkVBox" id="mobile_advanced_vbox">
+      <object class="GtkBox" id="mobile_advanced_vbox">
+        <property name="orientation">vertical</property>
         <property name="visible">True</property>
         <property name="can_focus">False</property>
         <property name="spacing">6</property>
@@ -144,8 +139,8 @@
           <object class="GtkLabel" id="mobile_advanced_label">
             <property name="visible">True</property>
             <property name="can_focus">False</property>
-            <property name="xalign">0</property>
             <property name="label" translatable="yes">Advanced</property>
+            <property name="xalign">0</property>
             <attributes>
               <attribute name="weight" value="bold"/>
             </attributes>
@@ -157,62 +152,54 @@
           </packing>
         </child>
         <child>
-          <object class="GtkTable" id="table2">
-            <property name="margin_start">12</property>
+          <object class="GtkGrid" id="table2">
             <property name="visible">True</property>
             <property name="can_focus">False</property>
-            <property name="n_rows">4</property>
-            <property name="n_columns">2</property>
-            <property name="column_spacing">12</property>
+            <property name="margin_start">12</property>
             <property name="row_spacing">6</property>
-            <child>
-              <placeholder/>
-            </child>
+            <property name="column_spacing">6</property>
             <child>
               <object class="GtkLabel" id="label29">
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
-                <property name="xalign">0</property>
-                <property name="label" translatable="yes">_APN:</property>
+                <property name="label" translatable="yes">_APN</property>
                 <property name="use_underline">True</property>
                 <property name="mnemonic_widget">mobile_apn</property>
+                <property name="xalign">1</property>
               </object>
               <packing>
-                <property name="x_options">GTK_FILL</property>
-                <property name="y_options"/>
+                <property name="left_attach">0</property>
+                <property name="top_attach">0</property>
               </packing>
             </child>
             <child>
               <object class="GtkLabel" id="label30">
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
-                <property name="xalign">0</property>
-                <property name="label" translatable="yes">N_etwork ID:</property>
+                <property name="label" translatable="yes">N_etwork ID</property>
                 <property name="use_underline">True</property>
                 <property name="mnemonic_widget">mobile_network_id</property>
+                <property name="xalign">1</property>
               </object>
               <packing>
+                <property name="left_attach">0</property>
                 <property name="top_attach">1</property>
-                <property name="bottom_attach">2</property>
-                <property name="x_options">GTK_FILL</property>
-                <property name="y_options"/>
               </packing>
             </child>
             <child>
               <object class="GtkEntry" id="mobile_network_id">
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
+                <property name="hexpand">True</property>
               </object>
               <packing>
                 <property name="left_attach">1</property>
-                <property name="right_attach">2</property>
                 <property name="top_attach">1</property>
-                <property name="bottom_attach">2</property>
-                <property name="y_options"/>
               </packing>
             </child>
             <child>
-              <object class="GtkHBox" id="hbox2">
+              <object class="GtkBox" id="hbox2">
+                <property name="orientation">horizontal</property>
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
                 <property name="spacing">6</property>
@@ -220,6 +207,7 @@
                   <object class="GtkEntry" id="mobile_apn">
                     <property name="visible">True</property>
                     <property name="can_focus">True</property>
+                    <property name="hexpand">True</property>
                     <property name="invisible_char">●</property>
                   </object>
                   <packing>
@@ -230,7 +218,7 @@
                 </child>
                 <child>
                   <object class="GtkButton" id="mobile_apn_button">
-                    <property name="label" translatable="yes">Change...</property>
+                    <property name="label" translatable="yes">Change…</property>
                     <property name="visible">True</property>
                     <property name="can_focus">True</property>
                     <property name="receives_default">True</property>
@@ -244,24 +232,21 @@
               </object>
               <packing>
                 <property name="left_attach">1</property>
-                <property name="right_attach">2</property>
-                <property name="y_options"/>
+                <property name="top_attach">0</property>
               </packing>
             </child>
             <child>
               <object class="GtkLabel" id="label33">
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
-                <property name="xalign">0</property>
-                <property name="label" translatable="yes">P_IN:</property>
+                <property name="label" translatable="yes">P_IN</property>
                 <property name="use_underline">True</property>
                 <property name="mnemonic_widget">mobile_pin</property>
+                <property name="xalign">1</property>
               </object>
               <packing>
+                <property name="left_attach">0</property>
                 <property name="top_attach">3</property>
-                <property name="bottom_attach">4</property>
-                <property name="x_options">GTK_FILL</property>
-                <property name="y_options"/>
               </packing>
             </child>
             <child>
@@ -273,10 +258,7 @@
               </object>
               <packing>
                 <property name="left_attach">1</property>
-                <property name="right_attach">2</property>
                 <property name="top_attach">3</property>
-                <property name="bottom_attach">4</property>
-                <property name="y_options"/>
               </packing>
             </child>
             <child>
@@ -291,10 +273,11 @@
               </object>
               <packing>
                 <property name="left_attach">1</property>
-                <property name="right_attach">2</property>
                 <property name="top_attach">2</property>
-                <property name="bottom_attach">3</property>
               </packing>
+            </child>
+            <child>
+              <placeholder/>
             </child>
           </object>
           <packing>
@@ -311,7 +294,8 @@
       </packing>
     </child>
     <child>
-      <object class="GtkHBox" id="hbox1">
+      <object class="GtkBox" id="hbox1">
+        <property name="orientation">horizontal</property>
         <property name="visible">True</property>
         <property name="can_focus">False</property>
         <child>

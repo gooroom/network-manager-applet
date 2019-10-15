@@ -1,13 +1,19 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<interface>
-  <requires lib="gtk+" version="3.4"/>
-  <object class="GtkVBox" id="PppPage">
+<!-- Generated with glade 3.20.0 -->
+<interface domain="nm-applet">
+  <requires lib="gtk+" version="3.10"/>
+  <object class="GtkBox" id="PppPage">
+    <property name="orientation">vertical</property>
     <property name="visible">True</property>
     <property name="can_focus">False</property>
-    <property name="border_width">12</property>
+    <property name="margin_start">12</property>
+    <property name="margin_end">12</property>
+    <property name="margin_top">12</property>
+    <property name="margin_bottom">12</property>
     <property name="spacing">18</property>
     <child>
-      <object class="GtkVBox" id="vbox2">
+      <object class="GtkBox" id="vbox2">
+        <property name="orientation">vertical</property>
         <property name="visible">True</property>
         <property name="can_focus">False</property>
         <property name="spacing">6</property>
@@ -15,8 +21,8 @@
           <object class="GtkLabel" id="label28">
             <property name="visible">True</property>
             <property name="can_focus">False</property>
-            <property name="xalign">0</property>
             <property name="label" translatable="yes">Authentication</property>
+            <property name="xalign">0</property>
             <attributes>
               <attribute name="weight" value="bold"/>
             </attributes>
@@ -28,13 +34,15 @@
           </packing>
         </child>
         <child>
-          <object class="GtkVBox" id="vbox4">
-            <property name="margin_start">12</property>
+          <object class="GtkBox" id="vbox4">
+            <property name="orientation">vertical</property>
             <property name="visible">True</property>
             <property name="can_focus">False</property>
+            <property name="margin_start">12</property>
             <property name="spacing">6</property>
             <child>
-              <object class="GtkHBox" id="hbox2">
+              <object class="GtkBox" id="hbox2">
+                <property name="orientation">horizontal</property>
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
                 <property name="spacing">12</property>
@@ -42,8 +50,8 @@
                   <object class="GtkLabel" id="label1">
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
-                    <property name="xalign">0</property>
-                    <property name="label" translatable="yes">Allowed methods:</property>
+                    <property name="label" translatable="yes">Allowed methods</property>
+                    <property name="xalign">1</property>
                   </object>
                   <packing>
                     <property name="expand">False</property>
@@ -55,8 +63,8 @@
                   <object class="GtkLabel" id="auth_methods_label">
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
-                    <property name="xalign">0</property>
                     <property name="selectable">True</property>
+                    <property name="xalign">0</property>
                   </object>
                   <packing>
                     <property name="expand">True</property>
@@ -112,7 +120,8 @@
       </packing>
     </child>
     <child>
-      <object class="GtkVBox" id="vbox5">
+      <object class="GtkBox" id="vbox5">
+        <property name="orientation">vertical</property>
         <property name="visible">True</property>
         <property name="can_focus">False</property>
         <property name="spacing">6</property>
@@ -120,8 +129,8 @@
           <object class="GtkLabel" id="label29">
             <property name="visible">True</property>
             <property name="can_focus">False</property>
-            <property name="xalign">0</property>
             <property name="label" translatable="yes">Compression</property>
+            <property name="xalign">0</property>
             <attributes>
               <attribute name="weight" value="bold"/>
             </attributes>
@@ -133,13 +142,15 @@
           </packing>
         </child>
         <child>
-          <object class="GtkVBox" id="vbox6">
-            <property name="margin_start">12</property>
+          <object class="GtkBox" id="vbox6">
+            <property name="orientation">vertical</property>
             <property name="visible">True</property>
             <property name="can_focus">False</property>
+            <property name="margin_start">12</property>
             <property name="spacing">6</property>
             <child>
-              <object class="GtkVBox" id="vbox7">
+              <object class="GtkBox" id="vbox7">
+                <property name="orientation">vertical</property>
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
                 <property name="spacing">6</property>
@@ -159,10 +170,11 @@
                   </packing>
                 </child>
                 <child>
-                  <object class="GtkVBox" id="vbox8">
-                    <property name="margin_start">12</property>
+                  <object class="GtkBox" id="vbox8">
+                    <property name="orientation">vertical</property>
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
+                    <property name="margin_start">12</property>
                     <property name="spacing">6</property>
                     <child>
                       <object class="GtkCheckButton" id="ppp_require_mppe_128">
@@ -268,7 +280,8 @@
       </packing>
     </child>
     <child>
-      <object class="GtkVBox" id="vbox9">
+      <object class="GtkBox" id="vbox9">
+        <property name="orientation">vertical</property>
         <property name="visible">True</property>
         <property name="can_focus">False</property>
         <property name="spacing">6</property>
@@ -276,8 +289,8 @@
           <object class="GtkLabel" id="label31">
             <property name="visible">True</property>
             <property name="can_focus">False</property>
-            <property name="xalign">0</property>
             <property name="label" translatable="yes">Echo</property>
+            <property name="xalign">0</property>
             <attributes>
               <attribute name="weight" value="bold"/>
             </attributes>
@@ -290,11 +303,11 @@
         </child>
         <child>
           <object class="GtkCheckButton" id="ppp_send_echo_packets">
-            <property name="margin_start">12</property>
             <property name="label" translatable="yes">Send PPP _echo packets</property>
             <property name="visible">True</property>
             <property name="can_focus">True</property>
             <property name="receives_default">False</property>
+            <property name="margin_start">12</property>
             <property name="use_underline">True</property>
             <property name="draw_indicator">True</property>
           </object>

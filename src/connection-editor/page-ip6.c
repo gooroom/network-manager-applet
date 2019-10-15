@@ -32,6 +32,7 @@
 
 #include "page-ip6.h"
 #include "ip6-routes-dialog.h"
+#include "ce-utils.h"
 
 G_DEFINE_TYPE (CEPageIP6, ce_page_ip6, CE_TYPE_PAGE)
 
@@ -58,6 +59,7 @@ typedef struct {
 	GtkButton *addr_delete;
 	GtkTreeView *addr_list;
 	GtkCellRenderer *addr_cells[COL_LAST + 1];
+	GtkTreeModel *addr_saved;
 
 	/* DNS servers */
 	GtkWidget *dns_servers_label;
@@ -73,6 +75,9 @@ typedef struct {
 	/* IPv6 privacy extensions combo */
 	GtkWidget *ip6_privacy_label;
 	GtkComboBox *ip6_privacy_combo;
+
+	GtkWidget *ip6_addr_gen_mode_label;
+	GtkComboBox *ip6_addr_gen_mode_combo;
 
 	/* IPv6 required */
 	GtkCheckButton *ip6_required;
@@ -105,6 +110,9 @@ typedef struct {
 #define IP6_PRIVACY_PREFER_PUBLIC  1
 #define IP6_PRIVACY_PREFER_TEMP    2
 
+#define IP6_ADDR_GEN_MODE_EUI64    0
+#define IP6_ADDR_GEN_MODE_STABLE   1
+
 static void
 ip6_private_init (CEPageIP6 *self, NMConnection *connection)
 {
@@ -114,7 +122,7 @@ ip6_private_init (CEPageIP6 *self, NMConnection *connection)
 	NMSettingConnection *s_con;
 	const char *connection_type;
 	char *str_auto = NULL, *str_auto_only = NULL;
-	GList *cells;
+	gs_free_list GList *cells = NULL;
 
 	builder = CE_PAGE (self)->builder;
 
@@ -203,7 +211,7 @@ ip6_private_init (CEPageIP6 *self, NMConnection *connection)
 		gtk_list_store_set (priv->method_store, &iter,
 		                    METHOD_COL_NAME, _("Shared to other computers"),
 		                    METHOD_COL_NUM, IP6_METHOD_SHARED,
-		                    METHOD_COL_ENABLED, FALSE,
+		                    METHOD_COL_ENABLED, TRUE,
 		                    -1);
 	}
 
@@ -222,6 +230,9 @@ ip6_private_init (CEPageIP6 *self, NMConnection *connection)
 
 	priv->ip6_privacy_label = GTK_WIDGET (gtk_builder_get_object (builder, "ip6_privacy_label"));
 	priv->ip6_privacy_combo = GTK_COMBO_BOX (gtk_builder_get_object (builder, "ip6_privacy_combo"));
+
+	priv->ip6_addr_gen_mode_label = GTK_WIDGET (gtk_builder_get_object (builder, "ip6_addr_gen_mode_label"));
+	priv->ip6_addr_gen_mode_combo = GTK_COMBO_BOX (gtk_builder_get_object (builder, "ip6_addr_gen_mode_combo"));
 
 	priv->ip6_required = GTK_CHECK_BUTTON (gtk_builder_get_object (builder, "ip6_required_checkbutton"));
 	/* Hide IP6-require button if it'll never be used for a particular method */
@@ -243,9 +254,12 @@ method_changed (GtkComboBox *combo, gpointer user_data)
 	gboolean dns_enabled = FALSE;
 	gboolean routes_enabled = FALSE;
 	gboolean ip6_privacy_enabled = FALSE;
+	gboolean ip6_addr_gen_mode_enabled = TRUE;
 	gboolean ip6_required_enabled = TRUE;
 	gboolean method_auto = FALSE;
 	GtkTreeIter iter;
+	GtkListStore *store;
+	const char *tooltip = NULL, *label = NULL;
 
 	if (gtk_combo_box_get_active_iter (priv->method, &iter)) {
 		gtk_tree_model_get (GTK_TREE_MODEL (priv->method_store), &iter,
@@ -254,62 +268,92 @@ method_changed (GtkComboBox *combo, gpointer user_data)
 
 	switch (method) {
 	case IP6_METHOD_AUTO:
-		addr_enabled = FALSE;
+		addr_enabled = TRUE;
 		routes_enabled = TRUE;
 		dns_enabled = TRUE;
 		method_auto = TRUE;
 		ip6_privacy_enabled = TRUE;
+		tooltip = CE_TOOLTIP_ADDR_AUTO;
+		label = CE_LABEL_ADDR_AUTO;
 		break;
 	case IP6_METHOD_AUTO_ADDRESSES:
-		addr_enabled = FALSE;
+		addr_enabled = TRUE;
 		dns_enabled = routes_enabled = TRUE;
 		ip6_privacy_enabled = TRUE;
+		tooltip = CE_TOOLTIP_ADDR_AUTO;
+		label = CE_LABEL_ADDR_AUTO;
 		break;
 	case IP6_METHOD_AUTO_DHCP_ONLY:
-		addr_enabled = FALSE;
+		addr_enabled = TRUE;
 		routes_enabled = TRUE;
+		tooltip = CE_TOOLTIP_ADDR_AUTO;
+		label = CE_LABEL_ADDR_AUTO;
 		break;
 	case IP6_METHOD_MANUAL:
 		addr_enabled = dns_enabled = routes_enabled = TRUE;
+		tooltip = CE_TOOLTIP_ADDR_MANUAL;
+		label = CE_LABEL_ADDR_MANUAL;
+		break;
+	case IP6_METHOD_SHARED:
+		addr_enabled = dns_enabled = routes_enabled = TRUE;
+		tooltip = CE_TOOLTIP_ADDR_SHARED;
+		label = CE_LABEL_ADDR_SHARED;
 		break;
 	case IP6_METHOD_IGNORE:
 		ip6_required_enabled = FALSE;
+		ip6_addr_gen_mode_enabled = FALSE;
 		break;
 	default:
 		break;
 	}
 
+	gtk_widget_set_tooltip_text (GTK_WIDGET (priv->addr_list), tooltip);
+	gtk_label_set_text (GTK_LABEL (priv->addr_label), label);
+
 	gtk_widget_set_sensitive (priv->addr_label, addr_enabled);
 	gtk_widget_set_sensitive (GTK_WIDGET (priv->addr_add), addr_enabled);
 	gtk_widget_set_sensitive (GTK_WIDGET (priv->addr_delete), addr_enabled);
 	gtk_widget_set_sensitive (GTK_WIDGET (priv->addr_list), addr_enabled);
-	if (!addr_enabled) {
-		GtkListStore *store;
 
-		store = GTK_LIST_STORE (gtk_tree_view_get_model (priv->addr_list));
-		gtk_list_store_clear (store);
+	if (addr_enabled) {
+		if (priv->addr_saved) {
+			/* Restore old entries */
+			gtk_tree_view_set_model (priv->addr_list, priv->addr_saved);
+			g_clear_object (&priv->addr_saved);
+		}
+	} else {
+		if (!priv->addr_saved) {
+			/* Save current entries, set empty list */
+			priv->addr_saved = g_object_ref (gtk_tree_view_get_model (priv->addr_list));
+			store = gtk_list_store_new (3, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_STRING);
+			gtk_tree_view_set_model (priv->addr_list, GTK_TREE_MODEL (store));
+			g_object_unref (store);
+		}
 	}
 
 	gtk_widget_set_sensitive (priv->dns_servers_label, dns_enabled);
 	if (method_auto)
-		gtk_label_set_text_with_mnemonic (GTK_LABEL (priv->dns_servers_label), _("Additional DNS ser_vers:"));
+		gtk_label_set_text_with_mnemonic (GTK_LABEL (priv->dns_servers_label), _("Additional DNS ser_vers"));
 	else
-		gtk_label_set_text_with_mnemonic (GTK_LABEL (priv->dns_servers_label), _("DNS ser_vers:"));
+		gtk_label_set_text_with_mnemonic (GTK_LABEL (priv->dns_servers_label), _("DNS ser_vers"));
 	gtk_widget_set_sensitive (GTK_WIDGET (priv->dns_servers), dns_enabled);
 	if (!dns_enabled)
 		gtk_entry_set_text (priv->dns_servers, "");
 
 	gtk_widget_set_sensitive (priv->dns_searches_label, dns_enabled);
 	if (method_auto)
-		gtk_label_set_text_with_mnemonic (GTK_LABEL (priv->dns_searches_label), _("Additional s_earch domains:"));
+		gtk_label_set_text_with_mnemonic (GTK_LABEL (priv->dns_searches_label), _("Additional s_earch domains"));
 	else
-		gtk_label_set_text_with_mnemonic (GTK_LABEL (priv->dns_searches_label), _("S_earch domains:"));
+		gtk_label_set_text_with_mnemonic (GTK_LABEL (priv->dns_searches_label), _("S_earch domains"));
 	gtk_widget_set_sensitive (GTK_WIDGET (priv->dns_searches), dns_enabled);
 	if (!dns_enabled)
 		gtk_entry_set_text (priv->dns_searches, "");
 
 	gtk_widget_set_sensitive (priv->ip6_privacy_label, ip6_privacy_enabled);
 	gtk_widget_set_sensitive (GTK_WIDGET (priv->ip6_privacy_combo), ip6_privacy_enabled);
+
+	gtk_widget_set_sensitive (priv->ip6_addr_gen_mode_label, ip6_addr_gen_mode_enabled);
+	gtk_widget_set_sensitive (GTK_WIDGET (priv->ip6_addr_gen_mode_combo), ip6_addr_gen_mode_enabled);
 
 	gtk_widget_set_sensitive (GTK_WIDGET (priv->ip6_required), ip6_required_enabled);
 
@@ -347,6 +391,8 @@ populate_ui (CEPageIP6 *self)
 	int method = IP6_METHOD_AUTO;
 	NMSettingIP6ConfigPrivacy ip6_privacy;
 	int ip6_privacy_idx = IP6_PRIVACY_DISABLED;
+	NMSettingIP6ConfigAddrGenMode ip6_addr_gen_mode;
+	int ip6_addr_gen_mode_idx;
 	GString *string = NULL;
 	SetMethodInfo info;
 	const char *str_method;
@@ -448,6 +494,13 @@ populate_ui (CEPageIP6 *self)
 	}
 	gtk_combo_box_set_active (priv->ip6_privacy_combo, ip6_privacy_idx);
 
+	ip6_addr_gen_mode = nm_setting_ip6_config_get_addr_gen_mode (NM_SETTING_IP6_CONFIG (setting));
+	if (ip6_addr_gen_mode == NM_SETTING_IP6_CONFIG_ADDR_GEN_MODE_EUI64)
+		ip6_addr_gen_mode_idx = IP6_ADDR_GEN_MODE_EUI64;
+	else
+		ip6_addr_gen_mode_idx = IP6_ADDR_GEN_MODE_STABLE;
+	gtk_combo_box_set_active (priv->ip6_addr_gen_mode_combo, ip6_addr_gen_mode_idx);
+
 	/* IPv6 required */
 	gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (priv->ip6_required),
 	                              !nm_setting_ip_config_get_may_fail (setting));
@@ -537,8 +590,7 @@ addr_delete_clicked (GtkButton *button, gpointer user_data)
 	if (gtk_tree_model_get_iter (model, &iter, (GtkTreePath *) selected_rows->data))
 		gtk_list_store_remove (GTK_LIST_STORE (model), &iter);
 
-	g_list_foreach (selected_rows, (GFunc) gtk_tree_path_free, NULL);
-	g_list_free (selected_rows);
+	g_list_free_full (selected_rows, (GDestroyNotify) gtk_tree_path_free);
 
 	num_rows = gtk_tree_model_iter_n_children (model, NULL);
 	if (num_rows && gtk_tree_model_iter_nth_child (model, &iter, NULL, num_rows - 1)) {
@@ -850,9 +902,9 @@ key_pressed_cb (GtkWidget *widget, GdkEventKey *event, gpointer user_data)
 }
 
 static void
-address_line_info_destroy (AddressLineInfo *info)
+address_line_info_destroy (gpointer data, GClosure *closure)
 {
-	g_slice_free (AddressLineInfo, info);
+	g_slice_free (AddressLineInfo, data);
 }
 
 static void
@@ -903,7 +955,7 @@ cell_editing_started (GtkCellRenderer *cell,
 	g_signal_connect_data (G_OBJECT (editable), "changed",
 	                       (GCallback) cell_changed_cb,
 	                       info,
-	                       (GClosureNotify) address_line_info_destroy, 0);
+	                       address_line_info_destroy, 0);
 
 	/* Set up key pressed handler - need to handle Tab key */
 	g_signal_connect (G_OBJECT (editable), "key-press-event",
@@ -1040,16 +1092,13 @@ cell_error_data_func (GtkTreeViewColumn *tree_column,
 }
 
 static void
-finish_setup (CEPageIP6 *self, gpointer unused, GError *error, gpointer user_data)
+finish_setup (CEPageIP6 *self, gpointer user_data)
 {
 	CEPageIP6Private *priv = CE_PAGE_IP6_GET_PRIVATE (self);
 	GtkTreeSelection *selection;
 	gint offset;
 	GtkTreeViewColumn *column;
 	GtkCellRenderer *renderer;
-
-	if (error)
-		return;
 
 	populate_ui (self);
 
@@ -1124,6 +1173,7 @@ finish_setup (CEPageIP6 *self, gpointer unused, GError *error, gpointer user_dat
 	g_signal_connect (priv->dns_servers, "insert-text", G_CALLBACK (dns_servers_filter_cb), self);
 	g_signal_connect_swapped (priv->dns_searches, "changed", G_CALLBACK (ce_page_changed), self);
 	g_signal_connect_swapped (priv->ip6_privacy_combo, "changed", G_CALLBACK (ce_page_changed), self);
+	g_signal_connect_swapped (priv->ip6_addr_gen_mode_combo, "changed", G_CALLBACK (ce_page_changed), self);
 
 	method_changed (priv->method, self);
 	g_signal_connect (priv->method, "changed", G_CALLBACK (method_changed), self);
@@ -1150,7 +1200,7 @@ ce_page_ip6_new (NMConnectionEditor *editor,
 	                                 connection,
 	                                 parent_window,
 	                                 client,
-	                                 UIDIR "/ce-page-ip6.ui",
+	                                 "/org/gnome/nm_connection_editor/ce-page-ip6.ui",
 	                                 "IP6Page",
 	                                 _("IPv6 Settings")));
 	if (!self) {
@@ -1170,7 +1220,7 @@ ce_page_ip6_new (NMConnectionEditor *editor,
 	priv->setting = nm_connection_get_setting_ip6_config (connection);
 	g_assert (priv->setting);
 
-	g_signal_connect (self, "initialized", G_CALLBACK (finish_setup), NULL);
+	g_signal_connect (self, CE_PAGE_INITIALIZED, G_CALLBACK (finish_setup), NULL);
 
 	return CE_PAGE (self);
 }
@@ -1190,6 +1240,7 @@ ui_to_setting (CEPageIP6 *self, GError **error)
 	char **items = NULL, **iter;
 	gboolean may_fail;
 	NMSettingIP6ConfigPrivacy ip6_privacy;
+	NMSettingIP6ConfigAddrGenMode ip6_addr_gen_mode;
 
 	/* Method */
 	if (gtk_combo_box_get_active_iter (priv->method, &tree_iter)) {
@@ -1245,7 +1296,7 @@ ui_to_setting (CEPageIP6 *self, GError **error)
 		if (   !addr_str
 		    || !nm_utils_ipaddr_valid (AF_INET6, addr_str)
 		    || is_address_unspecified (addr_str)) {
-			g_set_error (error, NMA_ERROR, NMA_ERROR_GENERIC, _("IPv6 address \"%s\" invalid"), addr_str ? addr_str : "");
+			g_set_error (error, NMA_ERROR, NMA_ERROR_GENERIC, _("IPv6 address “%s” invalid"), addr_str ? addr_str : "");
 			g_free (addr_str);
 			g_free (prefix_str);
 			g_free (addr_gw_str);
@@ -1253,7 +1304,7 @@ ui_to_setting (CEPageIP6 *self, GError **error)
 		}
 
 		if (!is_prefix_valid (prefix_str, &prefix)) {
-			g_set_error (error, NMA_ERROR, NMA_ERROR_GENERIC, _("IPv6 prefix \"%s\" invalid"), prefix_str ? prefix_str : "");
+			g_set_error (error, NMA_ERROR, NMA_ERROR_GENERIC, _("IPv6 prefix “%s” invalid"), prefix_str ? prefix_str : "");
 			g_free (addr_str);
 			g_free (prefix_str);
 			g_free (addr_gw_str);
@@ -1262,7 +1313,7 @@ ui_to_setting (CEPageIP6 *self, GError **error)
 
 		/* Gateway is optional... */
 		if (addr_gw_str && *addr_gw_str && !nm_utils_ipaddr_valid (AF_INET6, addr_gw_str)) {
-			g_set_error (error, NMA_ERROR, NMA_ERROR_GENERIC, _("IPv6 gateway \"%s\" invalid"), addr_gw_str);
+			g_set_error (error, NMA_ERROR, NMA_ERROR_GENERIC, _("IPv6 gateway “%s” invalid"), addr_gw_str);
 			g_free (addr_str);
 			g_free (prefix_str);
 			g_free (addr_gw_str);
@@ -1304,7 +1355,7 @@ ui_to_setting (CEPageIP6 *self, GError **error)
 			if (inet_pton (AF_INET6, stripped, &tmp_addr)) {
 				nm_setting_ip_config_add_dns (priv->setting, stripped);
 			} else {
-				g_set_error (error, NMA_ERROR, NMA_ERROR_GENERIC, _("IPv6 DNS server \"%s\" invalid"), stripped);
+				g_set_error (error, NMA_ERROR, NMA_ERROR_GENERIC, _("IPv6 DNS server “%s” invalid"), stripped);
 				g_strfreev (items);
 				goto out;
 			}
@@ -1342,10 +1393,16 @@ ui_to_setting (CEPageIP6 *self, GError **error)
 		break;
 	}
 
+	if (gtk_combo_box_get_active (priv->ip6_addr_gen_mode_combo) == IP6_ADDR_GEN_MODE_EUI64)
+		ip6_addr_gen_mode = NM_SETTING_IP6_CONFIG_ADDR_GEN_MODE_EUI64;
+	else
+		ip6_addr_gen_mode = NM_SETTING_IP6_CONFIG_ADDR_GEN_MODE_STABLE_PRIVACY;
+
 	may_fail = !gtk_toggle_button_get_active (GTK_TOGGLE_BUTTON (priv->ip6_required));
 	g_object_set (G_OBJECT (priv->setting),
 	              NM_SETTING_IP_CONFIG_MAY_FAIL, may_fail,
 	              NM_SETTING_IP6_CONFIG_IP6_PRIVACY, ip6_privacy,
+	              NM_SETTING_IP6_CONFIG_ADDR_GEN_MODE, (int) ip6_addr_gen_mode,
 	              NULL);
 
 	valid = TRUE;
@@ -1422,10 +1479,14 @@ change_method_combo (CEPage *page, gboolean is_hotspot)
 
 	/* Set active method */
 	if (is_hotspot) {
-		if (priv->hotspot_method_idx != -1)
+		if (priv->hotspot_method_idx == -1) {
+			int method = IP6_METHOD_SHARED;
+			if (g_strcmp0 (nm_setting_ip_config_get_method (priv->setting),
+			               NM_SETTING_IP6_CONFIG_METHOD_IGNORE) == 0)
+				method = IP6_METHOD_IGNORE;
+			gtk_combo_box_set_active (priv->method, method);
+		} else
 			gtk_combo_box_set_active (priv->method, priv->hotspot_method_idx);
-		else
-			gtk_combo_box_set_active (priv->method, IP6_METHOD_IGNORE);
 	} else {
 		if (priv->normal_method_idx != -1)
 			gtk_combo_box_set_active (priv->method, priv->normal_method_idx);

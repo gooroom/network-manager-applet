@@ -37,6 +37,7 @@ typedef struct {
 	GtkToggleButton *enabled;
 	GtkWidget *security_widget;
 	WirelessSecurity *security;
+	GtkSizeGroup *group;
 
 	gboolean initial_have_8021x;
 } CEPage8021xSecurityPrivate;
@@ -51,26 +52,29 @@ static void
 enable_toggled (GtkToggleButton *button, gpointer user_data)
 {
 	CEPage8021xSecurityPrivate *priv = CE_PAGE_8021X_SECURITY_GET_PRIVATE (user_data);
+	gboolean active = gtk_toggle_button_get_active (priv->enabled);
 
-	gtk_widget_set_sensitive (priv->security_widget, gtk_toggle_button_get_active (priv->enabled));
+	gtk_widget_set_sensitive (priv->security_widget, active);
+	nm_connection_editor_inter_page_set_value (CE_PAGE (user_data)->editor,
+	                                           INTER_PAGE_CHANGE_802_1X_ENABLE,
+	                                           GINT_TO_POINTER (active));
 	ce_page_changed (CE_PAGE (user_data));
 }
 
 static void
-finish_setup (CEPage8021xSecurity *self, gpointer unused, GError *error, gpointer user_data)
+finish_setup (CEPage8021xSecurity *self, gpointer user_data)
 {
 	CEPage *parent = CE_PAGE (self);
 	CEPage8021xSecurityPrivate *priv = CE_PAGE_8021X_SECURITY_GET_PRIVATE (self);
 	GtkWidget *parent_container;
 
-	if (error)
-		return;
-
-	priv->security = (WirelessSecurity *) ws_wpa_eap_new (parent->connection, TRUE, FALSE);
+	priv->security = (WirelessSecurity *) ws_wpa_eap_new (parent->connection, TRUE, FALSE, NULL);
 	if (!priv->security) {
 		g_warning ("Could not load 802.1X user interface.");
 		return;
 	}
+
+	wireless_security_add_to_size_group (priv->security, priv->group);
 
 	wireless_security_set_changed_notify (priv->security, stuff_changed, self);
 	priv->security_widget = wireless_security_get_widget (priv->security);
@@ -124,7 +128,9 @@ ce_page_8021x_security_new (NMConnectionEditor *editor,
 
 	priv->enabled = GTK_TOGGLE_BUTTON (gtk_check_button_new_with_mnemonic (_("Use 802.1_X security for this connection")));
 
-	g_signal_connect (self, "initialized", G_CALLBACK (finish_setup), NULL);
+	priv->group = gtk_size_group_new (GTK_SIZE_GROUP_HORIZONTAL);
+
+	g_signal_connect (self, CE_PAGE_INITIALIZED, G_CALLBACK (finish_setup), NULL);
 
 	if (priv->initial_have_8021x)
 		*out_secrets_setting_name = NM_SETTING_802_1X_SETTING_NAME;
@@ -172,8 +178,12 @@ ce_page_validate_v (CEPage *page, NMConnection *connection, GError **error)
 			ws_802_1x_fill_connection (priv->security, "wpa_eap_auth_combo", tmp_connection);
 
 			s_8021x = nm_connection_get_setting (tmp_connection, NM_TYPE_SETTING_802_1X);
-			nm_connection_add_setting (connection, nm_setting_duplicate (s_8021x));
+			nm_connection_add_setting (connection, NM_SETTING (g_object_ref (s_8021x)));
 
+			/* Remove the 8021x setting to prevent the clearing of secrets when the
+			 * simple-connection is destroyed.
+			 */
+			nm_connection_remove_setting (tmp_connection, NM_TYPE_SETTING_802_1X);
 			g_object_unref (tmp_connection);
 		}
 	} else {
@@ -187,6 +197,23 @@ ce_page_validate_v (CEPage *page, NMConnection *connection, GError **error)
 	return valid;
 }
 
+static gboolean
+inter_page_change (CEPage *page)
+{
+	CEPage8021xSecurityPrivate *priv = CE_PAGE_8021X_SECURITY_GET_PRIVATE (page);
+	gpointer macsec_mode;
+
+	if (nm_connection_editor_inter_page_get_value (page->editor,
+	                                               INTER_PAGE_CHANGE_MACSEC_MODE,
+	                                               &macsec_mode)) {
+		gtk_toggle_button_set_active (priv->enabled,
+		                              GPOINTER_TO_INT (macsec_mode) == NM_SETTING_MACSEC_MODE_EAP);
+		enable_toggled (priv->enabled, page);
+	}
+
+	return TRUE;
+}
+
 static void
 ce_page_8021x_security_init (CEPage8021xSecurity *self)
 {
@@ -195,7 +222,15 @@ ce_page_8021x_security_init (CEPage8021xSecurity *self)
 static void
 dispose (GObject *object)
 {
+	CEPage *parent = CE_PAGE (object);
 	CEPage8021xSecurityPrivate *priv = CE_PAGE_8021X_SECURITY_GET_PRIVATE (object);
+
+	g_clear_object (&priv->group);
+
+	if (priv->security_widget) {
+		gtk_container_remove (GTK_CONTAINER (parent->page), priv->security_widget);
+		priv->security_widget = NULL;
+	}
 
 	if (priv->security) {
 		wireless_security_unref (priv->security);
@@ -217,4 +252,5 @@ ce_page_8021x_security_class_init (CEPage8021xSecurityClass *security_class)
 	object_class->dispose = dispose;
 
 	parent_class->ce_page_validate_v = ce_page_validate_v;
+	parent_class->inter_page_change = inter_page_change;
 }

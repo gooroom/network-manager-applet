@@ -46,17 +46,7 @@ typedef struct {
 
 } CEPageMasterPrivate;
 
-enum {
-	CREATE_CONNECTION,
-	CONNECTION_ADDED,
-	CONNECTION_REMOVED,
-
-	LAST_SIGNAL
-};
-
-static guint signals[LAST_SIGNAL] = { 0 };
-
-static void finish_setup (CEPageMaster *self, gpointer unused, GError *error, gpointer user_data);
+static void finish_setup (CEPageMaster *self, gpointer user_data);
 
 enum {
 	COL_CONNECTION,
@@ -84,7 +74,7 @@ constructed (GObject *object)
 {
 	CEPageMaster *self = CE_PAGE_MASTER (object);
 
-	g_signal_connect (self, "initialized", G_CALLBACK (finish_setup), NULL);
+	g_signal_connect (self, CE_PAGE_INITIALIZED, G_CALLBACK (finish_setup), NULL);
 
 	G_OBJECT_CLASS (ce_page_master_parent_class)->constructed (object);
 }
@@ -158,8 +148,6 @@ connection_removed (NMClient *client,
 
 	gtk_list_store_remove (GTK_LIST_STORE (priv->connections_model), &iter);
 	ce_page_changed (CE_PAGE (self));
-
-	g_signal_emit (self, signals[CONNECTION_REMOVED], 0, connection);
 }
 
 static void
@@ -196,7 +184,7 @@ get_device_for_connection (NMClient *client, NMConnection *conn)
 	if (   !nm_setting_connection_get_interface_name (s_con)
 	       && !nm_connection_get_interface_name (conn)) {
 		NMSetting *s_hw;
-		GByteArray *mac_address;
+		gs_free char *mac_address = NULL;
 
 		s_hw = nm_connection_get_setting_by_name (conn, nm_setting_connection_get_connection_type (s_con));
 		if (!s_hw || !g_object_class_find_property (G_OBJECT_GET_CLASS (s_hw), "mac-address"))
@@ -205,7 +193,6 @@ get_device_for_connection (NMClient *client, NMConnection *conn)
 		g_object_get (G_OBJECT (s_hw), "mac-address", &mac_address, NULL);
 		if (!mac_address)
 			return NULL;
-		g_byte_array_unref (mac_address);
 	}
 
 	/* OK, now find that device */
@@ -246,7 +233,7 @@ check_new_slave_physical_port (CEPageMaster *self, NMConnection *conn)
 		if (dev == dev2) {
 			nm_connection_editor_warning (CE_PAGE (self)->parent_window,
 			                              _("Duplicate slaves"),
-			                              _("Slaves '%s' and '%s' both apply to device '%s'"),
+			                              _("Slaves “%s” and “%s” both apply to device “%s”"),
 			                              nm_connection_get_id (conn),
 			                              nm_connection_get_id (conn2),
 			                              nm_device_get_iface (dev));
@@ -257,8 +244,8 @@ check_new_slave_physical_port (CEPageMaster *self, NMConnection *conn)
 		if (self->aggregating && id && id2 && !strcmp (id, id2)) {
 			nm_connection_editor_warning (CE_PAGE (self)->parent_window,
 			                              _("Duplicate slaves"),
-			                              _("Slaves '%s' and '%s' apply to different virtual "
-			                                "ports ('%s' and '%s') of the same physical device."),
+			                              _("Slaves “%s” and “%s” apply to different virtual "
+			                                "ports (“%s” and “%s”) of the same physical device."),
 			                              nm_connection_get_id (conn),
 			                              nm_connection_get_id (conn2),
 			                              nm_device_get_iface (dev),
@@ -313,8 +300,6 @@ connection_added (NMClient *client,
 	                  G_CALLBACK (connection_removed), self);
 	g_signal_connect (connection, NM_CONNECTION_CHANGED,
 	                  G_CALLBACK (connection_changed), self);
-
-	g_signal_emit (self, signals[CONNECTION_ADDED], 0, connection);
 }
 
 static void
@@ -357,7 +342,8 @@ add_response_cb (NMConnectionEditor *editor, GtkResponseType response, gpointer 
 }
 
 static void
-add_connection (NMConnection *connection,
+add_connection (FUNC_TAG_NEW_CONNECTION_RESULT_IMPL,
+                NMConnection *connection,
                 gpointer user_data)
 {
 	CEPageMaster *self = user_data;
@@ -380,7 +366,7 @@ add_connection (NMConnection *connection,
 	iface_name = gtk_entry_get_text (priv->interface_name);
 	if (!*iface_name)
 		iface_name = nm_connection_get_interface_name (connection);
-	if (!iface_name || !nm_utils_iface_valid_name (iface_name))
+	if (!iface_name || !nm_utils_is_valid_iface_name (iface_name, NULL))
 		iface_name = nm_connection_get_id (connection);
 	name = g_strdup_printf (_("%s slave %d"), iface_name,
 	                        gtk_tree_model_iter_n_children (priv->connections_model, NULL) + 1);
@@ -393,17 +379,11 @@ add_connection (NMConnection *connection,
 	              NULL);
 	g_free (name);
 
-	g_signal_emit (self, signals[CREATE_CONNECTION], 0, connection);
-
-	editor = nm_connection_editor_new (priv->toplevel,
-	                                   connection,
-	                                   CE_PAGE (self)->client);
-	if (!editor) {
-		g_object_unref (connection);
+	editor = ce_page_new_editor (CE_PAGE (self), priv->toplevel, connection);
+	if (!editor)
 		return;
-	}
 
-	g_signal_connect (editor, "done", G_CALLBACK (add_response_cb), self);
+	g_signal_connect (editor, NM_CONNECTION_EDITOR_DONE, G_CALLBACK (add_response_cb), self);
 	nm_connection_editor_run (editor);
 }
 
@@ -433,9 +413,7 @@ get_selected_connection (CEPageMaster *self)
 	if (gtk_tree_model_get_iter (model, &iter, (GtkTreePath *) selected_rows->data))
 		gtk_tree_model_get (model, &iter, 0, &connection, -1);
 
-	/* free memory */
-	g_list_foreach (selected_rows, (GFunc) gtk_tree_path_free, NULL);
-	g_list_free (selected_rows);
+	g_list_free_full (selected_rows, (GDestroyNotify) gtk_tree_path_free);
 
 	return connection;
 }
@@ -464,13 +442,11 @@ edit_clicked (GtkButton *button, gpointer user_data)
 		return;
 	}
 
-	editor = nm_connection_editor_new (priv->toplevel,
-	                                   NM_CONNECTION (connection),
-	                                   CE_PAGE (self)->client);
+	editor = ce_page_new_editor (CE_PAGE (self), priv->toplevel, NM_CONNECTION (connection));
 	if (!editor)
 		return;
 
-	g_signal_connect (editor, "done", G_CALLBACK (edit_done_cb), self);
+	g_signal_connect (editor, NM_CONNECTION_EDITOR_DONE, G_CALLBACK (edit_done_cb), self);
 	nm_connection_editor_run (editor);
 }
 
@@ -484,7 +460,8 @@ connection_double_clicked_cb (GtkTreeView *tree_view,
 }
 
 static void
-delete_result_cb (NMRemoteConnection *connection,
+delete_result_cb (FUNC_TAG_DELETE_CONNECTION_RESULT_IMPL,
+                  NMRemoteConnection *connection,
                   gboolean deleted,
                   gpointer user_data)
 {
@@ -534,15 +511,12 @@ populate_ui (CEPageMaster *self)
 }
 
 static void
-finish_setup (CEPageMaster *self, gpointer unused, GError *error, gpointer user_data)
+finish_setup (CEPageMaster *self, gpointer user_data)
 {
 	CEPageMasterPrivate *priv = CE_PAGE_MASTER_GET_PRIVATE (self);
 	GtkTreeSelection *selection;
 	GtkBuilder *builder;
 	NMSettingConnection *s_con;
-
-	if (error)
-		return;
 
 	builder = CE_PAGE (self)->builder;
 
@@ -678,34 +652,6 @@ ce_page_master_class_init (CEPageMasterClass *master_class)
 
 	parent_class->ce_page_validate_v = ce_page_validate_v;
 	parent_class->last_update = last_update;
-
-	/* Signals */
-	signals[CREATE_CONNECTION] = 
-		g_signal_new ("create-connection",
-		              G_OBJECT_CLASS_TYPE (object_class),
-		              G_SIGNAL_RUN_FIRST,
-		              G_STRUCT_OFFSET (CEPageMasterClass, create_connection),
-		              NULL, NULL, NULL,
-		              G_TYPE_NONE, 1,
-		              NM_TYPE_CONNECTION);
-
-	signals[CONNECTION_ADDED] = 
-		g_signal_new ("connection-added",
-		              G_OBJECT_CLASS_TYPE (object_class),
-		              G_SIGNAL_RUN_FIRST,
-		              G_STRUCT_OFFSET (CEPageMasterClass, connection_added),
-		              NULL, NULL, NULL,
-		              G_TYPE_NONE, 1,
-		              NM_TYPE_CONNECTION);
-
-	signals[CONNECTION_REMOVED] = 
-		g_signal_new ("connection-removed",
-		              G_OBJECT_CLASS_TYPE (object_class),
-		              G_SIGNAL_RUN_FIRST,
-		              G_STRUCT_OFFSET (CEPageMasterClass, connection_removed),
-		              NULL, NULL, NULL,
-		              G_TYPE_NONE, 1,
-		              NM_TYPE_CONNECTION);
 }
 
 gboolean

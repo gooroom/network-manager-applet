@@ -33,6 +33,7 @@
 #include "page-ip4.h"
 #include "ip4-routes-dialog.h"
 #include "connection-helpers.h"
+#include "ce-utils.h"
 
 G_DEFINE_TYPE (CEPageIP4, ce_page_ip4, CE_TYPE_PAGE)
 
@@ -59,6 +60,8 @@ typedef struct {
 	GtkButton *addr_delete;
 	GtkTreeView *addr_list;
 	GtkCellRenderer *addr_cells[COL_LAST + 1];
+	GtkTreeModel *addr_saved;
+	guint32 addr_method;
 
 	/* DNS servers */
 	GtkWidget *dns_servers_label;
@@ -110,7 +113,7 @@ ip4_private_init (CEPageIP4 *self, NMConnection *connection)
 	NMSettingConnection *s_con;
 	const char *connection_type;
 	char *str_auto = NULL, *str_auto_only = NULL;
-	GList *cells;
+	gs_free_list GList *cells = NULL;
 
 	builder = CE_PAGE (self)->builder;
 
@@ -235,6 +238,22 @@ ip4_private_init (CEPageIP4 *self, NMConnection *connection)
 }
 
 static void
+address_list_changed (CEPageIP4 *self)
+{
+	CEPageIP4Private *priv = CE_PAGE_IP4_GET_PRIVATE (self);
+	GtkTreeModel *model;
+	int num_rows;
+
+	if (priv->addr_method != IP4_METHOD_SHARED)
+		return;
+
+	/* Only one address is allowed in shared mode */
+	model = gtk_tree_view_get_model (priv->addr_list);
+	num_rows = gtk_tree_model_iter_n_children (model, NULL);
+	gtk_widget_set_sensitive (GTK_WIDGET (priv->addr_add), num_rows == 0);
+}
+
+static void
 method_changed (GtkComboBox *combo, gpointer user_data)
 {
 	CEPageIP4Private *priv = CE_PAGE_IP4_GET_PRIVATE (user_data);
@@ -246,6 +265,8 @@ method_changed (GtkComboBox *combo, gpointer user_data)
 	gboolean ip4_required_enabled = TRUE;
 	gboolean method_auto = FALSE;
 	GtkTreeIter iter;
+	GtkListStore *store;
+	const char *tooltip = NULL, *label = NULL;
 
 	if (gtk_combo_box_get_active_iter (priv->method, &iter)) {
 		gtk_tree_model_get (GTK_TREE_MODEL (priv->method_store), &iter,
@@ -254,23 +275,39 @@ method_changed (GtkComboBox *combo, gpointer user_data)
 
 	switch (method) {
 	case IP4_METHOD_AUTO:
-		addr_enabled = FALSE;
+		addr_enabled = TRUE;
 		dhcp_enabled = routes_enabled = TRUE;
 		dns_enabled = TRUE;
 		method_auto = TRUE;
+		tooltip = CE_TOOLTIP_ADDR_AUTO;
+		label = CE_LABEL_ADDR_AUTO;
 		break;
 	case IP4_METHOD_AUTO_ADDRESSES:
-		addr_enabled = FALSE;
+		addr_enabled = TRUE;
 		dns_enabled = dhcp_enabled = routes_enabled = TRUE;
+		tooltip = CE_TOOLTIP_ADDR_AUTO;
+		label = CE_LABEL_ADDR_AUTO;
 		break;
 	case IP4_METHOD_MANUAL:
 		addr_enabled = dns_enabled = routes_enabled = TRUE;
+		tooltip = CE_TOOLTIP_ADDR_MANUAL;
+		label = CE_LABEL_ADDR_MANUAL;
+		break;
+	case IP4_METHOD_SHARED:
+		addr_enabled = TRUE;
+		tooltip = CE_TOOLTIP_ADDR_SHARED;
+		label = CE_LABEL_ADDR_SHARED;
 		break;
 	case IP4_METHOD_DISABLED:
 		addr_enabled = dns_enabled = dhcp_enabled = routes_enabled = ip4_required_enabled = FALSE;
+		break;
 	default:
 		break;
 	}
+
+	priv->addr_method = method;
+	gtk_widget_set_tooltip_text (GTK_WIDGET (priv->addr_list), tooltip);
+	gtk_label_set_text (GTK_LABEL (priv->addr_label), label);
 
 	/* Disable DHCP stuff for VPNs (though in the future we should support
 	 * DHCP over tap interfaces for OpenVPN and vpnc).
@@ -285,27 +322,55 @@ method_changed (GtkComboBox *combo, gpointer user_data)
 	gtk_widget_set_sensitive (GTK_WIDGET (priv->addr_add), addr_enabled);
 	gtk_widget_set_sensitive (GTK_WIDGET (priv->addr_delete), addr_enabled);
 	gtk_widget_set_sensitive (GTK_WIDGET (priv->addr_list), addr_enabled);
-	if (!addr_enabled) {
-		GtkListStore *store;
 
-		store = GTK_LIST_STORE (gtk_tree_view_get_model (priv->addr_list));
-		gtk_list_store_clear (store);
+	if (addr_enabled) {
+		if (priv->addr_saved) {
+			/* Restore old entries */
+			gtk_tree_view_set_model (priv->addr_list, priv->addr_saved);
+			g_clear_object (&priv->addr_saved);
+		}
+	} else {
+		if (!priv->addr_saved) {
+			/* Save current entries, set empty list */
+			priv->addr_saved = g_object_ref (gtk_tree_view_get_model (priv->addr_list));
+			store = gtk_list_store_new (3, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_STRING);
+			gtk_tree_view_set_model (priv->addr_list, GTK_TREE_MODEL (store));
+			g_object_unref (store);
+		}
 	}
+
+	if (method == IP4_METHOD_SHARED) {
+		GtkTreeModel *model;
+		gboolean iter_valid;
+		int i;
+
+		/* Remove all rows except first */
+		model = gtk_tree_view_get_model (priv->addr_list);
+		iter_valid = gtk_tree_model_get_iter_first (model, &iter);
+		for (i = 0; iter_valid; i++) {
+			if (i > 0)
+				iter_valid = gtk_list_store_remove (GTK_LIST_STORE (model), &iter);
+			else
+				iter_valid = gtk_tree_model_iter_next (model, &iter);
+		}
+	}
+
+	address_list_changed (user_data);
 
 	gtk_widget_set_sensitive (priv->dns_servers_label, dns_enabled);
 	if (method_auto)
-		gtk_label_set_text_with_mnemonic (GTK_LABEL (priv->dns_servers_label), _("Additional DNS ser_vers:"));
+		gtk_label_set_text_with_mnemonic (GTK_LABEL (priv->dns_servers_label), _("Additional DNS ser_vers"));
 	else
-		gtk_label_set_text_with_mnemonic (GTK_LABEL (priv->dns_servers_label), _("DNS ser_vers:"));
+		gtk_label_set_text_with_mnemonic (GTK_LABEL (priv->dns_servers_label), _("DNS ser_vers"));
 	gtk_widget_set_sensitive (GTK_WIDGET (priv->dns_servers), dns_enabled);
 	if (!dns_enabled)
 		gtk_entry_set_text (priv->dns_servers, "");
 
 	gtk_widget_set_sensitive (priv->dns_searches_label, dns_enabled);
 	if (method_auto)
-		gtk_label_set_text_with_mnemonic (GTK_LABEL (priv->dns_searches_label), _("Additional s_earch domains:"));
+		gtk_label_set_text_with_mnemonic (GTK_LABEL (priv->dns_searches_label), _("Additional s_earch domains"));
 	else
-		gtk_label_set_text_with_mnemonic (GTK_LABEL (priv->dns_searches_label), _("S_earch domains:"));
+		gtk_label_set_text_with_mnemonic (GTK_LABEL (priv->dns_searches_label), _("S_earch domains"));
 	gtk_widget_set_sensitive (GTK_WIDGET (priv->dns_searches), dns_enabled);
 	if (!dns_enabled)
 		gtk_entry_set_text (priv->dns_searches, "");
@@ -470,12 +535,14 @@ addr_add_clicked (GtkButton *button, gpointer user_data)
 
 	g_list_free (cells);
 	gtk_tree_path_free (path);
+	address_list_changed (user_data);
 }
 
 static void
 addr_delete_clicked (GtkButton *button, gpointer user_data)
 {
-	GtkTreeView *treeview = GTK_TREE_VIEW (user_data);
+	CEPageIP4Private *priv = CE_PAGE_IP4_GET_PRIVATE (user_data);
+	GtkTreeView *treeview = priv->addr_list;
 	GtkTreeSelection *selection;
 	GList *selected_rows;
 	GtkTreeModel *model = NULL;
@@ -493,14 +560,15 @@ addr_delete_clicked (GtkButton *button, gpointer user_data)
 	if (gtk_tree_model_get_iter (model, &iter, (GtkTreePath *) selected_rows->data))
 		gtk_list_store_remove (GTK_LIST_STORE (model), &iter);
 
-	g_list_foreach (selected_rows, (GFunc) gtk_tree_path_free, NULL);
-	g_list_free (selected_rows);
+	g_list_free_full (selected_rows, (GDestroyNotify) gtk_tree_path_free);
 
 	num_rows = gtk_tree_model_iter_n_children (model, NULL);
 	if (num_rows && gtk_tree_model_iter_nth_child (model, &iter, NULL, num_rows - 1)) {
 		selection = gtk_tree_view_get_selection (treeview);
 		gtk_tree_selection_select_iter (selection, &iter);
 	}
+
+	address_list_changed (user_data);
 }
 
 static void
@@ -742,7 +810,7 @@ gateway_matches_address (const char *gw_str, const char *addr_str, guint32 prefi
 static gboolean
 possibly_wrong_gateway (GtkTreeModel *model, GtkTreeIter *iter, const char *gw_str)
 {
-	char *addr_str, *prefix_str;
+	gs_free char *addr_str = NULL, *prefix_str = NULL;
 	gboolean addr_valid;
 	guint32 prefix;
 
@@ -856,9 +924,9 @@ key_pressed_cb (GtkWidget *widget, GdkEventKey *event, gpointer user_data)
 }
 
 static void
-address_line_info_destroy (AddressLineInfo *info)
+address_line_info_destroy (gpointer data, GClosure *closure)
 {
-	g_slice_free (AddressLineInfo, info);
+	g_slice_free (AddressLineInfo, data);
 }
 
 static void
@@ -904,7 +972,7 @@ cell_editing_started (GtkCellRenderer *cell,
 	g_signal_connect_data (G_OBJECT (editable), "changed",
 	                       (GCallback) cell_changed_cb,
 	                       info,
-	                       (GClosureNotify) address_line_info_destroy, 0);
+	                       address_line_info_destroy, 0);
 
 	/* Set up key pressed handler - need to handle Tab key */
 	g_signal_connect (G_OBJECT (editable), "key-press-event",
@@ -1042,16 +1110,13 @@ cell_error_data_func (GtkTreeViewColumn *tree_column,
 }
 
 static void
-finish_setup (CEPageIP4 *self, gpointer unused, GError *error, gpointer user_data)
+finish_setup (CEPageIP4 *self, gpointer user_data)
 {
 	CEPageIP4Private *priv = CE_PAGE_IP4_GET_PRIVATE (self);
 	GtkTreeSelection *selection;
 	gint offset;
 	GtkTreeViewColumn *column;
 	GtkCellRenderer *renderer;
-
-	if (error)
-		return;
 
 	populate_ui (self);
 
@@ -1118,7 +1183,7 @@ finish_setup (CEPageIP4 *self, gpointer unused, GError *error, gpointer user_dat
 	gtk_widget_set_sensitive (GTK_WIDGET (priv->addr_delete), FALSE);
 
 	g_signal_connect (priv->addr_add, "clicked", G_CALLBACK (addr_add_clicked), self);
-	g_signal_connect (priv->addr_delete, "clicked", G_CALLBACK (addr_delete_clicked), priv->addr_list);
+	g_signal_connect (priv->addr_delete, "clicked", G_CALLBACK (addr_delete_clicked), self);
 	selection = gtk_tree_view_get_selection (priv->addr_list);
 	g_signal_connect (selection, "changed", G_CALLBACK (list_selection_changed), priv->addr_delete);
 
@@ -1153,7 +1218,7 @@ ce_page_ip4_new (NMConnectionEditor *editor,
 	                                 connection,
 	                                 parent_window,
 	                                 client,
-	                                 UIDIR "/ce-page-ip4.ui",
+	                                 "/org/gnome/nm_connection_editor/ce-page-ip4.ui",
 	                                 "IP4Page",
 	                                 _("IPv4 Settings")));
 	if (!self) {
@@ -1173,7 +1238,7 @@ ce_page_ip4_new (NMConnectionEditor *editor,
 	priv->setting = nm_connection_get_setting_ip4_config (connection);
 	g_assert (priv->setting);
 
-	g_signal_connect (self, "initialized", G_CALLBACK (finish_setup), NULL);
+	g_signal_connect (self, CE_PAGE_INITIALIZED, G_CALLBACK (finish_setup), NULL);
 
 	return CE_PAGE (self);
 }
@@ -1235,7 +1300,7 @@ ui_to_setting (CEPageIP4 *self, GError **error)
 	model = gtk_tree_view_get_model (priv->addr_list);
 	iter_valid = gtk_tree_model_get_iter_first (model, &tree_iter);
 
-	addresses = g_ptr_array_sized_new (1);
+	addresses = g_ptr_array_new_with_free_func (free_one_addr);
 	while (iter_valid) {
 		char *addr = NULL, *netmask = NULL, *addr_gw = NULL;
 		NMIPAddress *nm_addr;
@@ -1250,7 +1315,7 @@ ui_to_setting (CEPageIP4 *self, GError **error)
 		if (   !addr
 		    || !nm_utils_ipaddr_valid (AF_INET, addr)
 		    || is_address_unspecified (addr)) {
-			g_set_error (error, NMA_ERROR, NMA_ERROR_GENERIC, _("IPv4 address \"%s\" invalid"), addr ? addr : "");
+			g_set_error (error, NMA_ERROR, NMA_ERROR_GENERIC, _("IPv4 address “%s” invalid"), addr ? addr : "");
 			g_free (addr);
 			g_free (netmask);
 			g_free (addr_gw);
@@ -1258,7 +1323,7 @@ ui_to_setting (CEPageIP4 *self, GError **error)
 		}
 
 		if (!parse_netmask (netmask, &prefix)) {
-			g_set_error (error, NMA_ERROR, NMA_ERROR_GENERIC, _("IPv4 address netmask \"%s\" invalid"), netmask ? netmask : "");
+			g_set_error (error, NMA_ERROR, NMA_ERROR_GENERIC, _("IPv4 address netmask “%s” invalid"), netmask ? netmask : "");
 			g_free (addr);
 			g_free (netmask);
 			g_free (addr_gw);
@@ -1267,7 +1332,7 @@ ui_to_setting (CEPageIP4 *self, GError **error)
 
 		/* Gateway is optional... */
 		if (addr_gw && *addr_gw && !nm_utils_ipaddr_valid (AF_INET, addr_gw)) {
-			g_set_error (error, NMA_ERROR, NMA_ERROR_GENERIC, _("IPv4 gateway \"%s\" invalid"), addr_gw);
+			g_set_error (error, NMA_ERROR, NMA_ERROR_GENERIC, _("IPv4 gateway “%s” invalid"), addr_gw);
 			g_free (addr);
 			g_free (netmask);
 			g_free (addr_gw);
@@ -1310,7 +1375,7 @@ ui_to_setting (CEPageIP4 *self, GError **error)
 			if (inet_pton (AF_INET, stripped, &tmp_addr))
 				g_ptr_array_add (tmp_array, g_strdup (stripped));
 			else {
-				g_set_error (error, NMA_ERROR, NMA_ERROR_GENERIC, _("IPv4 DNS server \"%s\" invalid"), stripped);
+				g_set_error (error, NMA_ERROR, NMA_ERROR_GENERIC, _("IPv4 DNS server “%s” invalid"), stripped);
 				g_strfreev (items);
 				g_ptr_array_free (tmp_array, TRUE);
 				goto out;
@@ -1360,10 +1425,8 @@ ui_to_setting (CEPageIP4 *self, GError **error)
 	valid = TRUE;
 
 out:
-	if (addresses) {
-		g_ptr_array_foreach (addresses, (GFunc) free_one_addr, NULL);
+	if (addresses)
 		g_ptr_array_free (addresses, TRUE);
-	}
 	g_free (gateway);
 
 	g_strfreev (dns_servers);

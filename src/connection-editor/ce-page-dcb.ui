@@ -1,35 +1,37 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- Generated with glade 3.16.1 -->
-<interface>
-  <requires lib="gtk+" version="3.4"/>
-  <object class="GtkTable" id="DcbPage">
+<!-- Generated with glade 3.20.0 -->
+<interface domain="nm-applet">
+  <requires lib="gtk+" version="3.10"/>
+  <object class="GtkGrid" id="DcbPage">
     <property name="visible">True</property>
     <property name="can_focus">False</property>
-    <property name="border_width">12</property>
-    <property name="n_rows">2</property>
-    <property name="n_columns">2</property>
-    <property name="column_spacing">12</property>
+    <property name="margin_start">12</property>
+    <property name="margin_end">12</property>
+    <property name="margin_top">12</property>
+    <property name="margin_bottom">12</property>
     <property name="row_spacing">6</property>
+    <property name="column_spacing">6</property>
     <child>
       <object class="GtkCheckButton" id="dcb_enabled_checkbutton">
-        <property name="label" translatable="yes">Use Data Center Bridging (DCB) for this connection</property>
+        <property name="label" translatable="yes">_Use Data Center Bridging (DCB) for this connection</property>
         <property name="visible">True</property>
         <property name="can_focus">True</property>
         <property name="receives_default">False</property>
+        <property name="use_underline">True</property>
         <property name="draw_indicator">True</property>
       </object>
       <packing>
-        <property name="right_attach">2</property>
-        <property name="y_options">GTK_FILL</property>
+        <property name="left_attach">0</property>
+        <property name="top_attach">0</property>
+        <property name="width">2</property>
       </packing>
     </child>
     <child>
       <object class="GtkBox" id="dcb_box">
-        <property name="valign">start</property>
-        <property name="margin_start">6</property>
         <property name="visible">True</property>
         <property name="can_focus">False</property>
         <property name="valign">start</property>
+        <property name="margin_start">6</property>
         <property name="orientation">vertical</property>
         <property name="spacing">12</property>
         <child>
@@ -50,8 +52,6 @@
               <packing>
                 <property name="left_attach">0</property>
                 <property name="top_attach">1</property>
-                <property name="width">1</property>
-                <property name="height">1</property>
               </packing>
             </child>
             <child>
@@ -65,8 +65,6 @@
               <packing>
                 <property name="left_attach">0</property>
                 <property name="top_attach">2</property>
-                <property name="width">1</property>
-                <property name="height">1</property>
               </packing>
             </child>
             <child>
@@ -80,8 +78,6 @@
               <packing>
                 <property name="left_attach">0</property>
                 <property name="top_attach">3</property>
-                <property name="width">1</property>
-                <property name="height">1</property>
               </packing>
             </child>
             <child>
@@ -95,8 +91,6 @@
               <packing>
                 <property name="left_attach">0</property>
                 <property name="top_attach">4</property>
-                <property name="width">1</property>
-                <property name="height">1</property>
               </packing>
             </child>
             <child>
@@ -112,8 +106,6 @@
               <packing>
                 <property name="left_attach">0</property>
                 <property name="top_attach">0</property>
-                <property name="width">1</property>
-                <property name="height">1</property>
               </packing>
             </child>
             <child>
@@ -131,8 +123,6 @@
               <packing>
                 <property name="left_attach">1</property>
                 <property name="top_attach">0</property>
-                <property name="width">1</property>
-                <property name="height">1</property>
               </packing>
             </child>
             <child>
@@ -150,8 +140,6 @@
               <packing>
                 <property name="left_attach">2</property>
                 <property name="top_attach">0</property>
-                <property name="width">1</property>
-                <property name="height">1</property>
               </packing>
             </child>
             <child>
@@ -169,8 +157,6 @@
               <packing>
                 <property name="left_attach">3</property>
                 <property name="top_attach">0</property>
-                <property name="width">1</property>
-                <property name="height">1</property>
               </packing>
             </child>
             <child>
@@ -187,8 +173,6 @@
               <packing>
                 <property name="left_attach">4</property>
                 <property name="top_attach">0</property>
-                <property name="width">1</property>
-                <property name="height">1</property>
               </packing>
             </child>
             <child>
@@ -202,8 +186,6 @@
               <packing>
                 <property name="left_attach">2</property>
                 <property name="top_attach">1</property>
-                <property name="width">1</property>
-                <property name="height">1</property>
               </packing>
             </child>
             <child>
@@ -217,8 +199,6 @@
               <packing>
                 <property name="left_attach">3</property>
                 <property name="top_attach">1</property>
-                <property name="width">1</property>
-                <property name="height">1</property>
               </packing>
             </child>
             <child>
@@ -232,8 +212,6 @@
               <packing>
                 <property name="left_attach">1</property>
                 <property name="top_attach">2</property>
-                <property name="width">1</property>
-                <property name="height">1</property>
               </packing>
             </child>
             <child>
@@ -247,8 +225,6 @@
               <packing>
                 <property name="left_attach">2</property>
                 <property name="top_attach">2</property>
-                <property name="width">1</property>
-                <property name="height">1</property>
               </packing>
             </child>
             <child>
@@ -262,8 +238,6 @@
               <packing>
                 <property name="left_attach">3</property>
                 <property name="top_attach">2</property>
-                <property name="width">1</property>
-                <property name="height">1</property>
               </packing>
             </child>
             <child>
@@ -277,8 +251,6 @@
               <packing>
                 <property name="left_attach">1</property>
                 <property name="top_attach">3</property>
-                <property name="width">1</property>
-                <property name="height">1</property>
               </packing>
             </child>
             <child>
@@ -292,8 +264,6 @@
               <packing>
                 <property name="left_attach">2</property>
                 <property name="top_attach">3</property>
-                <property name="width">1</property>
-                <property name="height">1</property>
               </packing>
             </child>
             <child>
@@ -307,8 +277,6 @@
               <packing>
                 <property name="left_attach">3</property>
                 <property name="top_attach">3</property>
-                <property name="width">1</property>
-                <property name="height">1</property>
               </packing>
             </child>
             <child>
@@ -322,8 +290,6 @@
               <packing>
                 <property name="left_attach">1</property>
                 <property name="top_attach">4</property>
-                <property name="width">1</property>
-                <property name="height">1</property>
               </packing>
             </child>
             <child>
@@ -337,8 +303,6 @@
               <packing>
                 <property name="left_attach">2</property>
                 <property name="top_attach">4</property>
-                <property name="width">1</property>
-                <property name="height">1</property>
               </packing>
             </child>
             <child>
@@ -352,8 +316,6 @@
               <packing>
                 <property name="left_attach">3</property>
                 <property name="top_attach">4</property>
-                <property name="width">1</property>
-                <property name="height">1</property>
               </packing>
             </child>
             <child>
@@ -367,13 +329,11 @@
               <packing>
                 <property name="left_attach">1</property>
                 <property name="top_attach">1</property>
-                <property name="width">1</property>
-                <property name="height">1</property>
               </packing>
             </child>
             <child>
               <object class="GtkButton" id="pfc_options_button">
-                <property name="label" translatable="yes">Options...</property>
+                <property name="label" translatable="yes">Options…</property>
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="receives_default">True</property>
@@ -382,8 +342,6 @@
               <packing>
                 <property name="left_attach">5</property>
                 <property name="top_attach">4</property>
-                <property name="width">1</property>
-                <property name="height">1</property>
               </packing>
             </child>
             <child>
@@ -397,8 +355,6 @@
               <packing>
                 <property name="left_attach">0</property>
                 <property name="top_attach">5</property>
-                <property name="width">1</property>
-                <property name="height">1</property>
               </packing>
             </child>
             <child>
@@ -412,8 +368,6 @@
               <packing>
                 <property name="left_attach">1</property>
                 <property name="top_attach">5</property>
-                <property name="width">1</property>
-                <property name="height">1</property>
               </packing>
             </child>
             <child>
@@ -427,8 +381,6 @@
               <packing>
                 <property name="left_attach">2</property>
                 <property name="top_attach">5</property>
-                <property name="width">1</property>
-                <property name="height">1</property>
               </packing>
             </child>
             <child>
@@ -442,13 +394,11 @@
               <packing>
                 <property name="left_attach">3</property>
                 <property name="top_attach">5</property>
-                <property name="width">1</property>
-                <property name="height">1</property>
               </packing>
             </child>
             <child>
               <object class="GtkButton" id="pg_options_button">
-                <property name="label" translatable="yes">Options...</property>
+                <property name="label" translatable="yes">Options…</property>
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="receives_default">True</property>
@@ -457,8 +407,6 @@
               <packing>
                 <property name="left_attach">5</property>
                 <property name="top_attach">5</property>
-                <property name="width">1</property>
-                <property name="height">1</property>
               </packing>
             </child>
             <child>
@@ -469,21 +417,19 @@
                 <property name="active_id">0</property>
                 <items>
                   <item id="0" translatable="yes">default</item>
-                  <item id="1" translatable="yes">0</item>
-                  <item id="2" translatable="yes">1</item>
-                  <item id="3" translatable="yes">2</item>
-                  <item id="4" translatable="yes">3</item>
-                  <item id="5" translatable="yes">4</item>
-                  <item id="6" translatable="yes">5</item>
-                  <item id="7" translatable="yes">6</item>
-                  <item id="8" translatable="yes">7</item>
+                  <item id="1">0</item>
+                  <item id="2">1</item>
+                  <item id="3">2</item>
+                  <item id="4">3</item>
+                  <item id="5">4</item>
+                  <item id="6">5</item>
+                  <item id="7">6</item>
+                  <item id="8">7</item>
                 </items>
               </object>
               <packing>
                 <property name="left_attach">4</property>
                 <property name="top_attach">1</property>
-                <property name="width">1</property>
-                <property name="height">1</property>
               </packing>
             </child>
             <child>
@@ -494,21 +440,19 @@
                 <property name="active_id">0</property>
                 <items>
                   <item id="0" translatable="yes">default</item>
-                  <item id="1" translatable="yes">0</item>
-                  <item id="2" translatable="yes">1</item>
-                  <item id="3" translatable="yes">2</item>
-                  <item id="4" translatable="yes">3</item>
-                  <item id="5" translatable="yes">4</item>
-                  <item id="6" translatable="yes">5</item>
-                  <item id="7" translatable="yes">6</item>
-                  <item id="8" translatable="yes">7</item>
+                  <item id="1">0</item>
+                  <item id="2">1</item>
+                  <item id="3">2</item>
+                  <item id="4">3</item>
+                  <item id="5">4</item>
+                  <item id="6">5</item>
+                  <item id="7">6</item>
+                  <item id="8">7</item>
                 </items>
               </object>
               <packing>
                 <property name="left_attach">4</property>
                 <property name="top_attach">2</property>
-                <property name="width">1</property>
-                <property name="height">1</property>
               </packing>
             </child>
             <child>
@@ -519,21 +463,19 @@
                 <property name="active_id">0</property>
                 <items>
                   <item id="0" translatable="yes">default</item>
-                  <item id="1" translatable="yes">0</item>
-                  <item id="2" translatable="yes">1</item>
-                  <item id="3" translatable="yes">2</item>
-                  <item id="4" translatable="yes">3</item>
-                  <item id="5" translatable="yes">4</item>
-                  <item id="6" translatable="yes">5</item>
-                  <item id="7" translatable="yes">6</item>
-                  <item id="8" translatable="yes">7</item>
+                  <item id="1">0</item>
+                  <item id="2">1</item>
+                  <item id="3">2</item>
+                  <item id="4">3</item>
+                  <item id="5">4</item>
+                  <item id="6">5</item>
+                  <item id="7">6</item>
+                  <item id="8">7</item>
                 </items>
               </object>
               <packing>
                 <property name="left_attach">4</property>
                 <property name="top_attach">3</property>
-                <property name="width">1</property>
-                <property name="height">1</property>
               </packing>
             </child>
             <child>
@@ -549,8 +491,6 @@
               <packing>
                 <property name="left_attach">5</property>
                 <property name="top_attach">1</property>
-                <property name="width">1</property>
-                <property name="height">1</property>
               </packing>
             </child>
             <child>
@@ -577,10 +517,9 @@
         </child>
       </object>
       <packing>
-        <property name="right_attach">2</property>
+        <property name="left_attach">0</property>
         <property name="top_attach">1</property>
-        <property name="bottom_attach">2</property>
-        <property name="y_options"/>
+        <property name="width">2</property>
       </packing>
     </child>
   </object>
@@ -671,9 +610,9 @@
               <object class="GtkLabel" id="label1">
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
-                <property name="xalign">0</property>
                 <property name="label" translatable="yes">Enable or disable priority pause transmission for each User Priority.</property>
                 <property name="wrap">True</property>
+                <property name="xalign">0</property>
                 <attributes>
                   <attribute name="style" value="italic"/>
                 </attributes>
@@ -693,7 +632,8 @@
                   <object class="GtkLabel" id="label2">
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
-                    <property name="label" translatable="yes">Priority:</property>
+                    <property name="label" translatable="yes">Priority</property>
+                    <property name="xalign">1</property>
                   </object>
                   <packing>
                     <property name="expand">False</property>
@@ -710,7 +650,8 @@
                       <object class="GtkLabel" id="label3">
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
-                        <property name="label" translatable="yes">0:</property>
+                        <property name="label" translatable="yes">0</property>
+                        <property name="xalign">1</property>
                         <attributes>
                           <attribute name="weight" value="bold"/>
                         </attributes>
@@ -750,7 +691,8 @@
                       <object class="GtkLabel" id="label4">
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
-                        <property name="label" translatable="yes">1:</property>
+                        <property name="label" translatable="yes">1</property>
+                        <property name="xalign">1</property>
                         <attributes>
                           <attribute name="weight" value="bold"/>
                         </attributes>
@@ -790,7 +732,8 @@
                       <object class="GtkLabel" id="label5">
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
-                        <property name="label" translatable="yes">2:</property>
+                        <property name="label" translatable="yes">2</property>
+                        <property name="xalign">1</property>
                         <attributes>
                           <attribute name="weight" value="bold"/>
                         </attributes>
@@ -830,7 +773,8 @@
                       <object class="GtkLabel" id="label6">
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
-                        <property name="label" translatable="yes">3:</property>
+                        <property name="label" translatable="yes">3</property>
+                        <property name="xalign">1</property>
                         <attributes>
                           <attribute name="weight" value="bold"/>
                         </attributes>
@@ -870,7 +814,8 @@
                       <object class="GtkLabel" id="label7">
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
-                        <property name="label" translatable="yes">4:</property>
+                        <property name="label" translatable="yes">4</property>
+                        <property name="xalign">1</property>
                         <attributes>
                           <attribute name="weight" value="bold"/>
                         </attributes>
@@ -910,7 +855,8 @@
                       <object class="GtkLabel" id="label8">
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
-                        <property name="label" translatable="yes">5:</property>
+                        <property name="label" translatable="yes">5</property>
+                        <property name="xalign">1</property>
                         <attributes>
                           <attribute name="weight" value="bold"/>
                         </attributes>
@@ -950,7 +896,8 @@
                       <object class="GtkLabel" id="label9">
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
-                        <property name="label" translatable="yes">6:</property>
+                        <property name="label" translatable="yes">6</property>
+                        <property name="xalign">1</property>
                         <attributes>
                           <attribute name="weight" value="bold"/>
                         </attributes>
@@ -990,7 +937,8 @@
                       <object class="GtkLabel" id="label10">
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
-                        <property name="label" translatable="yes">7:</property>
+                        <property name="label" translatable="yes">7</property>
+                        <property name="xalign">1</property>
                         <attributes>
                           <attribute name="weight" value="bold"/>
                         </attributes>
@@ -1113,19 +1061,17 @@
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
                 <property name="row_spacing">6</property>
-                <property name="column_spacing">12</property>
+                <property name="column_spacing">6</property>
                 <child>
                   <object class="GtkLabel" id="label54">
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
-                    <property name="xalign">0</property>
-                    <property name="label" translatable="yes">Traffic Class:</property>
+                    <property name="label" translatable="yes">Traffic Class</property>
+                    <property name="xalign">1</property>
                   </object>
                   <packing>
                     <property name="left_attach">0</property>
                     <property name="top_attach">9</property>
-                    <property name="width">1</property>
-                    <property name="height">1</property>
                   </packing>
                 </child>
                 <child>
@@ -1137,7 +1083,8 @@
                       <object class="GtkLabel" id="label53">
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
-                        <property name="label" translatable="yes">0:</property>
+                        <property name="label" translatable="yes">0</property>
+                        <property name="xalign">1</property>
                         <attributes>
                           <attribute name="weight" value="bold"/>
                         </attributes>
@@ -1154,14 +1101,14 @@
                         <property name="can_focus">False</property>
                         <property name="active_id">0</property>
                         <items>
-                          <item translatable="yes">0</item>
-                          <item translatable="yes">1</item>
-                          <item translatable="yes">2</item>
-                          <item translatable="yes">3</item>
-                          <item translatable="yes">4</item>
-                          <item translatable="yes">5</item>
-                          <item translatable="yes">6</item>
-                          <item translatable="yes">7</item>
+                          <item>0</item>
+                          <item>1</item>
+                          <item>2</item>
+                          <item>3</item>
+                          <item>4</item>
+                          <item>5</item>
+                          <item>6</item>
+                          <item>7</item>
                         </items>
                       </object>
                       <packing>
@@ -1174,8 +1121,6 @@
                   <packing>
                     <property name="left_attach">1</property>
                     <property name="top_attach">9</property>
-                    <property name="width">1</property>
-                    <property name="height">1</property>
                   </packing>
                 </child>
                 <child>
@@ -1187,7 +1132,8 @@
                       <object class="GtkLabel" id="label55">
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
-                        <property name="label" translatable="yes">1:</property>
+                        <property name="label" translatable="yes">1</property>
+                        <property name="xalign">1</property>
                         <attributes>
                           <attribute name="weight" value="bold"/>
                         </attributes>
@@ -1204,14 +1150,14 @@
                         <property name="can_focus">False</property>
                         <property name="active_id">0</property>
                         <items>
-                          <item translatable="yes">0</item>
-                          <item translatable="yes">1</item>
-                          <item translatable="yes">2</item>
-                          <item translatable="yes">3</item>
-                          <item translatable="yes">4</item>
-                          <item translatable="yes">5</item>
-                          <item translatable="yes">6</item>
-                          <item translatable="yes">7</item>
+                          <item>0</item>
+                          <item>1</item>
+                          <item>2</item>
+                          <item>3</item>
+                          <item>4</item>
+                          <item>5</item>
+                          <item>6</item>
+                          <item>7</item>
                         </items>
                       </object>
                       <packing>
@@ -1224,8 +1170,6 @@
                   <packing>
                     <property name="left_attach">2</property>
                     <property name="top_attach">9</property>
-                    <property name="width">1</property>
-                    <property name="height">1</property>
                   </packing>
                 </child>
                 <child>
@@ -1237,7 +1181,8 @@
                       <object class="GtkLabel" id="label56">
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
-                        <property name="label" translatable="yes">2:</property>
+                        <property name="label" translatable="yes">2</property>
+                        <property name="xalign">1</property>
                         <attributes>
                           <attribute name="weight" value="bold"/>
                         </attributes>
@@ -1254,14 +1199,14 @@
                         <property name="can_focus">False</property>
                         <property name="active_id">0</property>
                         <items>
-                          <item translatable="yes">0</item>
-                          <item translatable="yes">1</item>
-                          <item translatable="yes">2</item>
-                          <item translatable="yes">3</item>
-                          <item translatable="yes">4</item>
-                          <item translatable="yes">5</item>
-                          <item translatable="yes">6</item>
-                          <item translatable="yes">7</item>
+                          <item>0</item>
+                          <item>1</item>
+                          <item>2</item>
+                          <item>3</item>
+                          <item>4</item>
+                          <item>5</item>
+                          <item>6</item>
+                          <item>7</item>
                         </items>
                       </object>
                       <packing>
@@ -1274,8 +1219,6 @@
                   <packing>
                     <property name="left_attach">3</property>
                     <property name="top_attach">9</property>
-                    <property name="width">1</property>
-                    <property name="height">1</property>
                   </packing>
                 </child>
                 <child>
@@ -1287,7 +1230,8 @@
                       <object class="GtkLabel" id="label57">
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
-                        <property name="label" translatable="yes">3:</property>
+                        <property name="label" translatable="yes">3</property>
+                        <property name="xalign">1</property>
                         <attributes>
                           <attribute name="weight" value="bold"/>
                         </attributes>
@@ -1304,14 +1248,14 @@
                         <property name="can_focus">False</property>
                         <property name="active_id">0</property>
                         <items>
-                          <item translatable="yes">0</item>
-                          <item translatable="yes">1</item>
-                          <item translatable="yes">2</item>
-                          <item translatable="yes">3</item>
-                          <item translatable="yes">4</item>
-                          <item translatable="yes">5</item>
-                          <item translatable="yes">6</item>
-                          <item translatable="yes">7</item>
+                          <item>0</item>
+                          <item>1</item>
+                          <item>2</item>
+                          <item>3</item>
+                          <item>4</item>
+                          <item>5</item>
+                          <item>6</item>
+                          <item>7</item>
                         </items>
                       </object>
                       <packing>
@@ -1324,8 +1268,6 @@
                   <packing>
                     <property name="left_attach">4</property>
                     <property name="top_attach">9</property>
-                    <property name="width">1</property>
-                    <property name="height">1</property>
                   </packing>
                 </child>
                 <child>
@@ -1337,7 +1279,8 @@
                       <object class="GtkLabel" id="label58">
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
-                        <property name="label" translatable="yes">4:</property>
+                        <property name="label" translatable="yes">4</property>
+                        <property name="xalign">1</property>
                         <attributes>
                           <attribute name="weight" value="bold"/>
                         </attributes>
@@ -1354,14 +1297,14 @@
                         <property name="can_focus">False</property>
                         <property name="active_id">0</property>
                         <items>
-                          <item translatable="yes">0</item>
-                          <item translatable="yes">1</item>
-                          <item translatable="yes">2</item>
-                          <item translatable="yes">3</item>
-                          <item translatable="yes">4</item>
-                          <item translatable="yes">5</item>
-                          <item translatable="yes">6</item>
-                          <item translatable="yes">7</item>
+                          <item>0</item>
+                          <item>1</item>
+                          <item>2</item>
+                          <item>3</item>
+                          <item>4</item>
+                          <item>5</item>
+                          <item>6</item>
+                          <item>7</item>
                         </items>
                       </object>
                       <packing>
@@ -1374,8 +1317,6 @@
                   <packing>
                     <property name="left_attach">5</property>
                     <property name="top_attach">9</property>
-                    <property name="width">1</property>
-                    <property name="height">1</property>
                   </packing>
                 </child>
                 <child>
@@ -1387,7 +1328,8 @@
                       <object class="GtkLabel" id="label59">
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
-                        <property name="label" translatable="yes">5:</property>
+                        <property name="label" translatable="yes">5</property>
+                        <property name="xalign">1</property>
                         <attributes>
                           <attribute name="weight" value="bold"/>
                         </attributes>
@@ -1404,14 +1346,14 @@
                         <property name="can_focus">False</property>
                         <property name="active_id">0</property>
                         <items>
-                          <item translatable="yes">0</item>
-                          <item translatable="yes">1</item>
-                          <item translatable="yes">2</item>
-                          <item translatable="yes">3</item>
-                          <item translatable="yes">4</item>
-                          <item translatable="yes">5</item>
-                          <item translatable="yes">6</item>
-                          <item translatable="yes">7</item>
+                          <item>0</item>
+                          <item>1</item>
+                          <item>2</item>
+                          <item>3</item>
+                          <item>4</item>
+                          <item>5</item>
+                          <item>6</item>
+                          <item>7</item>
                         </items>
                       </object>
                       <packing>
@@ -1424,8 +1366,6 @@
                   <packing>
                     <property name="left_attach">6</property>
                     <property name="top_attach">9</property>
-                    <property name="width">1</property>
-                    <property name="height">1</property>
                   </packing>
                 </child>
                 <child>
@@ -1437,7 +1377,8 @@
                       <object class="GtkLabel" id="label60">
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
-                        <property name="label" translatable="yes">6:</property>
+                        <property name="label" translatable="yes">6</property>
+                        <property name="xalign">1</property>
                         <attributes>
                           <attribute name="weight" value="bold"/>
                         </attributes>
@@ -1454,14 +1395,14 @@
                         <property name="can_focus">False</property>
                         <property name="active_id">0</property>
                         <items>
-                          <item translatable="yes">0</item>
-                          <item translatable="yes">1</item>
-                          <item translatable="yes">2</item>
-                          <item translatable="yes">3</item>
-                          <item translatable="yes">4</item>
-                          <item translatable="yes">5</item>
-                          <item translatable="yes">6</item>
-                          <item translatable="yes">7</item>
+                          <item>0</item>
+                          <item>1</item>
+                          <item>2</item>
+                          <item>3</item>
+                          <item>4</item>
+                          <item>5</item>
+                          <item>6</item>
+                          <item>7</item>
                         </items>
                       </object>
                       <packing>
@@ -1474,8 +1415,6 @@
                   <packing>
                     <property name="left_attach">7</property>
                     <property name="top_attach">9</property>
-                    <property name="width">1</property>
-                    <property name="height">1</property>
                   </packing>
                 </child>
                 <child>
@@ -1487,7 +1426,8 @@
                       <object class="GtkLabel" id="label61">
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
-                        <property name="label" translatable="yes">7:</property>
+                        <property name="label" translatable="yes">7</property>
+                        <property name="xalign">1</property>
                         <attributes>
                           <attribute name="weight" value="bold"/>
                         </attributes>
@@ -1504,14 +1444,14 @@
                         <property name="can_focus">False</property>
                         <property name="active_id">0</property>
                         <items>
-                          <item translatable="yes">0</item>
-                          <item translatable="yes">1</item>
-                          <item translatable="yes">2</item>
-                          <item translatable="yes">3</item>
-                          <item translatable="yes">4</item>
-                          <item translatable="yes">5</item>
-                          <item translatable="yes">6</item>
-                          <item translatable="yes">7</item>
+                          <item>0</item>
+                          <item>1</item>
+                          <item>2</item>
+                          <item>3</item>
+                          <item>4</item>
+                          <item>5</item>
+                          <item>6</item>
+                          <item>7</item>
                         </items>
                       </object>
                       <packing>
@@ -1524,22 +1464,18 @@
                   <packing>
                     <property name="left_attach">8</property>
                     <property name="top_attach">9</property>
-                    <property name="width">1</property>
-                    <property name="height">1</property>
                   </packing>
                 </child>
                 <child>
                   <object class="GtkLabel" id="label44">
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
-                    <property name="xalign">0</property>
-                    <property name="label" translatable="yes">Strict Bandwidth:</property>
+                    <property name="label" translatable="yes">Strict Bandwidth</property>
+                    <property name="xalign">1</property>
                   </object>
                   <packing>
                     <property name="left_attach">0</property>
                     <property name="top_attach">7</property>
-                    <property name="width">1</property>
-                    <property name="height">1</property>
                   </packing>
                 </child>
                 <child>
@@ -1551,7 +1487,8 @@
                       <object class="GtkLabel" id="label45">
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
-                        <property name="label" translatable="yes">0:</property>
+                        <property name="label" translatable="yes">0</property>
+                        <property name="xalign">1</property>
                         <attributes>
                           <attribute name="weight" value="bold"/>
                         </attributes>
@@ -1579,8 +1516,6 @@
                   <packing>
                     <property name="left_attach">1</property>
                     <property name="top_attach">7</property>
-                    <property name="width">1</property>
-                    <property name="height">1</property>
                   </packing>
                 </child>
                 <child>
@@ -1592,7 +1527,8 @@
                       <object class="GtkLabel" id="label46">
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
-                        <property name="label" translatable="yes">1:</property>
+                        <property name="label" translatable="yes">1</property>
+                        <property name="xalign">1</property>
                         <attributes>
                           <attribute name="weight" value="bold"/>
                         </attributes>
@@ -1620,8 +1556,6 @@
                   <packing>
                     <property name="left_attach">2</property>
                     <property name="top_attach">7</property>
-                    <property name="width">1</property>
-                    <property name="height">1</property>
                   </packing>
                 </child>
                 <child>
@@ -1633,7 +1567,8 @@
                       <object class="GtkLabel" id="label47">
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
-                        <property name="label" translatable="yes">2:</property>
+                        <property name="label" translatable="yes">2</property>
+                        <property name="xalign">1</property>
                         <attributes>
                           <attribute name="weight" value="bold"/>
                         </attributes>
@@ -1661,8 +1596,6 @@
                   <packing>
                     <property name="left_attach">3</property>
                     <property name="top_attach">7</property>
-                    <property name="width">1</property>
-                    <property name="height">1</property>
                   </packing>
                 </child>
                 <child>
@@ -1674,7 +1607,8 @@
                       <object class="GtkLabel" id="label48">
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
-                        <property name="label" translatable="yes">3:</property>
+                        <property name="label" translatable="yes">3</property>
+                        <property name="xalign">1</property>
                         <attributes>
                           <attribute name="weight" value="bold"/>
                         </attributes>
@@ -1702,8 +1636,6 @@
                   <packing>
                     <property name="left_attach">4</property>
                     <property name="top_attach">7</property>
-                    <property name="width">1</property>
-                    <property name="height">1</property>
                   </packing>
                 </child>
                 <child>
@@ -1715,7 +1647,8 @@
                       <object class="GtkLabel" id="label49">
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
-                        <property name="label" translatable="yes">4:</property>
+                        <property name="label" translatable="yes">4</property>
+                        <property name="xalign">1</property>
                         <attributes>
                           <attribute name="weight" value="bold"/>
                         </attributes>
@@ -1743,8 +1676,6 @@
                   <packing>
                     <property name="left_attach">5</property>
                     <property name="top_attach">7</property>
-                    <property name="width">1</property>
-                    <property name="height">1</property>
                   </packing>
                 </child>
                 <child>
@@ -1756,7 +1687,8 @@
                       <object class="GtkLabel" id="label50">
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
-                        <property name="label" translatable="yes">5:</property>
+                        <property name="label" translatable="yes">5</property>
+                        <property name="xalign">1</property>
                         <attributes>
                           <attribute name="weight" value="bold"/>
                         </attributes>
@@ -1784,8 +1716,6 @@
                   <packing>
                     <property name="left_attach">6</property>
                     <property name="top_attach">7</property>
-                    <property name="width">1</property>
-                    <property name="height">1</property>
                   </packing>
                 </child>
                 <child>
@@ -1797,7 +1727,8 @@
                       <object class="GtkLabel" id="label51">
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
-                        <property name="label" translatable="yes">6:</property>
+                        <property name="label" translatable="yes">6</property>
+                        <property name="xalign">1</property>
                         <attributes>
                           <attribute name="weight" value="bold"/>
                         </attributes>
@@ -1825,8 +1756,6 @@
                   <packing>
                     <property name="left_attach">7</property>
                     <property name="top_attach">7</property>
-                    <property name="width">1</property>
-                    <property name="height">1</property>
                   </packing>
                 </child>
                 <child>
@@ -1838,7 +1767,8 @@
                       <object class="GtkLabel" id="label52">
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
-                        <property name="label" translatable="yes">7:</property>
+                        <property name="label" translatable="yes">7</property>
+                        <property name="xalign">1</property>
                         <attributes>
                           <attribute name="weight" value="bold"/>
                         </attributes>
@@ -1866,22 +1796,18 @@
                   <packing>
                     <property name="left_attach">8</property>
                     <property name="top_attach">7</property>
-                    <property name="width">1</property>
-                    <property name="height">1</property>
                   </packing>
                 </child>
                 <child>
                   <object class="GtkLabel" id="label26">
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
-                    <property name="xalign">0</property>
-                    <property name="label" translatable="yes">Priority Bandwidth:</property>
+                    <property name="label" translatable="yes">Priority Bandwidth</property>
+                    <property name="xalign">1</property>
                   </object>
                   <packing>
                     <property name="left_attach">0</property>
                     <property name="top_attach">5</property>
-                    <property name="width">1</property>
-                    <property name="height">1</property>
                   </packing>
                 </child>
                 <child>
@@ -1893,7 +1819,8 @@
                       <object class="GtkLabel" id="label27">
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
-                        <property name="label" translatable="yes">0:</property>
+                        <property name="label" translatable="yes">0</property>
+                        <property name="xalign">1</property>
                         <attributes>
                           <attribute name="weight" value="bold"/>
                         </attributes>
@@ -1921,8 +1848,6 @@
                   <packing>
                     <property name="left_attach">1</property>
                     <property name="top_attach">5</property>
-                    <property name="width">1</property>
-                    <property name="height">1</property>
                   </packing>
                 </child>
                 <child>
@@ -1934,7 +1859,8 @@
                       <object class="GtkLabel" id="label28">
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
-                        <property name="label" translatable="yes">1:</property>
+                        <property name="label" translatable="yes">1</property>
+                        <property name="xalign">1</property>
                         <attributes>
                           <attribute name="weight" value="bold"/>
                         </attributes>
@@ -1962,8 +1888,6 @@
                   <packing>
                     <property name="left_attach">2</property>
                     <property name="top_attach">5</property>
-                    <property name="width">1</property>
-                    <property name="height">1</property>
                   </packing>
                 </child>
                 <child>
@@ -1975,7 +1899,8 @@
                       <object class="GtkLabel" id="label29">
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
-                        <property name="label" translatable="yes">2:</property>
+                        <property name="label" translatable="yes">2</property>
+                        <property name="xalign">1</property>
                         <attributes>
                           <attribute name="weight" value="bold"/>
                         </attributes>
@@ -2003,8 +1928,6 @@
                   <packing>
                     <property name="left_attach">3</property>
                     <property name="top_attach">5</property>
-                    <property name="width">1</property>
-                    <property name="height">1</property>
                   </packing>
                 </child>
                 <child>
@@ -2016,7 +1939,8 @@
                       <object class="GtkLabel" id="label30">
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
-                        <property name="label" translatable="yes">3:</property>
+                        <property name="label" translatable="yes">3</property>
+                        <property name="xalign">1</property>
                         <attributes>
                           <attribute name="weight" value="bold"/>
                         </attributes>
@@ -2044,8 +1968,6 @@
                   <packing>
                     <property name="left_attach">4</property>
                     <property name="top_attach">5</property>
-                    <property name="width">1</property>
-                    <property name="height">1</property>
                   </packing>
                 </child>
                 <child>
@@ -2057,7 +1979,8 @@
                       <object class="GtkLabel" id="label31">
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
-                        <property name="label" translatable="yes">4:</property>
+                        <property name="label" translatable="yes">4</property>
+                        <property name="xalign">1</property>
                         <attributes>
                           <attribute name="weight" value="bold"/>
                         </attributes>
@@ -2085,8 +2008,6 @@
                   <packing>
                     <property name="left_attach">5</property>
                     <property name="top_attach">5</property>
-                    <property name="width">1</property>
-                    <property name="height">1</property>
                   </packing>
                 </child>
                 <child>
@@ -2098,7 +2019,8 @@
                       <object class="GtkLabel" id="label32">
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
-                        <property name="label" translatable="yes">5:</property>
+                        <property name="label" translatable="yes">5</property>
+                        <property name="xalign">1</property>
                         <attributes>
                           <attribute name="weight" value="bold"/>
                         </attributes>
@@ -2126,8 +2048,6 @@
                   <packing>
                     <property name="left_attach">6</property>
                     <property name="top_attach">5</property>
-                    <property name="width">1</property>
-                    <property name="height">1</property>
                   </packing>
                 </child>
                 <child>
@@ -2139,7 +2059,8 @@
                       <object class="GtkLabel" id="label33">
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
-                        <property name="label" translatable="yes">6:</property>
+                        <property name="label" translatable="yes">6</property>
+                        <property name="xalign">1</property>
                         <attributes>
                           <attribute name="weight" value="bold"/>
                         </attributes>
@@ -2167,8 +2088,6 @@
                   <packing>
                     <property name="left_attach">7</property>
                     <property name="top_attach">5</property>
-                    <property name="width">1</property>
-                    <property name="height">1</property>
                   </packing>
                 </child>
                 <child>
@@ -2180,7 +2099,8 @@
                       <object class="GtkLabel" id="label34">
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
-                        <property name="label" translatable="yes">7:</property>
+                        <property name="label" translatable="yes">7</property>
+                        <property name="xalign">1</property>
                         <attributes>
                           <attribute name="weight" value="bold"/>
                         </attributes>
@@ -2208,22 +2128,18 @@
                   <packing>
                     <property name="left_attach">8</property>
                     <property name="top_attach">5</property>
-                    <property name="width">1</property>
-                    <property name="height">1</property>
                   </packing>
                 </child>
                 <child>
                   <object class="GtkLabel" id="label35">
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
-                    <property name="xalign">0</property>
-                    <property name="label" translatable="yes">Group Bandwidth:</property>
+                    <property name="label" translatable="yes">Group Bandwidth</property>
+                    <property name="xalign">1</property>
                   </object>
                   <packing>
                     <property name="left_attach">0</property>
                     <property name="top_attach">3</property>
-                    <property name="width">1</property>
-                    <property name="height">1</property>
                   </packing>
                 </child>
                 <child>
@@ -2235,7 +2151,8 @@
                       <object class="GtkLabel" id="label36">
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
-                        <property name="label" translatable="yes">0:</property>
+                        <property name="label" translatable="yes">0</property>
+                        <property name="xalign">1</property>
                         <attributes>
                           <attribute name="weight" value="bold"/>
                         </attributes>
@@ -2263,8 +2180,6 @@
                   <packing>
                     <property name="left_attach">1</property>
                     <property name="top_attach">3</property>
-                    <property name="width">1</property>
-                    <property name="height">1</property>
                   </packing>
                 </child>
                 <child>
@@ -2276,7 +2191,8 @@
                       <object class="GtkLabel" id="label37">
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
-                        <property name="label" translatable="yes">1:</property>
+                        <property name="label" translatable="yes">1</property>
+                        <property name="xalign">1</property>
                         <attributes>
                           <attribute name="weight" value="bold"/>
                         </attributes>
@@ -2304,8 +2220,6 @@
                   <packing>
                     <property name="left_attach">2</property>
                     <property name="top_attach">3</property>
-                    <property name="width">1</property>
-                    <property name="height">1</property>
                   </packing>
                 </child>
                 <child>
@@ -2317,7 +2231,8 @@
                       <object class="GtkLabel" id="label38">
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
-                        <property name="label" translatable="yes">2:</property>
+                        <property name="label" translatable="yes">2</property>
+                        <property name="xalign">1</property>
                         <attributes>
                           <attribute name="weight" value="bold"/>
                         </attributes>
@@ -2345,8 +2260,6 @@
                   <packing>
                     <property name="left_attach">3</property>
                     <property name="top_attach">3</property>
-                    <property name="width">1</property>
-                    <property name="height">1</property>
                   </packing>
                 </child>
                 <child>
@@ -2358,7 +2271,8 @@
                       <object class="GtkLabel" id="label39">
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
-                        <property name="label" translatable="yes">3:</property>
+                        <property name="label" translatable="yes">3</property>
+                        <property name="xalign">1</property>
                         <attributes>
                           <attribute name="weight" value="bold"/>
                         </attributes>
@@ -2386,8 +2300,6 @@
                   <packing>
                     <property name="left_attach">4</property>
                     <property name="top_attach">3</property>
-                    <property name="width">1</property>
-                    <property name="height">1</property>
                   </packing>
                 </child>
                 <child>
@@ -2399,7 +2311,8 @@
                       <object class="GtkLabel" id="label40">
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
-                        <property name="label" translatable="yes">4:</property>
+                        <property name="label" translatable="yes">4</property>
+                        <property name="xalign">1</property>
                         <attributes>
                           <attribute name="weight" value="bold"/>
                         </attributes>
@@ -2427,8 +2340,6 @@
                   <packing>
                     <property name="left_attach">5</property>
                     <property name="top_attach">3</property>
-                    <property name="width">1</property>
-                    <property name="height">1</property>
                   </packing>
                 </child>
                 <child>
@@ -2440,7 +2351,8 @@
                       <object class="GtkLabel" id="label41">
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
-                        <property name="label" translatable="yes">5:</property>
+                        <property name="label" translatable="yes">5</property>
+                        <property name="xalign">1</property>
                         <attributes>
                           <attribute name="weight" value="bold"/>
                         </attributes>
@@ -2468,8 +2380,6 @@
                   <packing>
                     <property name="left_attach">6</property>
                     <property name="top_attach">3</property>
-                    <property name="width">1</property>
-                    <property name="height">1</property>
                   </packing>
                 </child>
                 <child>
@@ -2481,7 +2391,8 @@
                       <object class="GtkLabel" id="label42">
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
-                        <property name="label" translatable="yes">6:</property>
+                        <property name="label" translatable="yes">6</property>
+                        <property name="xalign">1</property>
                         <attributes>
                           <attribute name="weight" value="bold"/>
                         </attributes>
@@ -2509,8 +2420,6 @@
                   <packing>
                     <property name="left_attach">7</property>
                     <property name="top_attach">3</property>
-                    <property name="width">1</property>
-                    <property name="height">1</property>
                   </packing>
                 </child>
                 <child>
@@ -2522,7 +2431,8 @@
                       <object class="GtkLabel" id="label43">
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
-                        <property name="label" translatable="yes">7:</property>
+                        <property name="label" translatable="yes">7</property>
+                        <property name="xalign">1</property>
                         <attributes>
                           <attribute name="weight" value="bold"/>
                         </attributes>
@@ -2550,22 +2460,18 @@
                   <packing>
                     <property name="left_attach">8</property>
                     <property name="top_attach">3</property>
-                    <property name="width">1</property>
-                    <property name="height">1</property>
                   </packing>
                 </child>
                 <child>
                   <object class="GtkLabel" id="label11">
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
-                    <property name="xalign">0</property>
-                    <property name="label" translatable="yes">Group ID:</property>
+                    <property name="label" translatable="yes">Group ID</property>
+                    <property name="xalign">1</property>
                   </object>
                   <packing>
                     <property name="left_attach">0</property>
                     <property name="top_attach">1</property>
-                    <property name="width">1</property>
-                    <property name="height">1</property>
                   </packing>
                 </child>
                 <child>
@@ -2577,7 +2483,8 @@
                       <object class="GtkLabel" id="label12">
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
-                        <property name="label" translatable="yes">0:</property>
+                        <property name="label" translatable="yes">0</property>
+                        <property name="xalign">1</property>
                         <attributes>
                           <attribute name="weight" value="bold"/>
                         </attributes>
@@ -2594,15 +2501,15 @@
                         <property name="can_focus">False</property>
                         <property name="active_id">0</property>
                         <items>
-                          <item translatable="yes">0</item>
-                          <item translatable="yes">1</item>
-                          <item translatable="yes">2</item>
-                          <item translatable="yes">3</item>
-                          <item translatable="yes">4</item>
-                          <item translatable="yes">5</item>
-                          <item translatable="yes">6</item>
-                          <item translatable="yes">7</item>
-                          <item translatable="yes">15</item>
+                          <item>0</item>
+                          <item>1</item>
+                          <item>2</item>
+                          <item>3</item>
+                          <item>4</item>
+                          <item>5</item>
+                          <item>6</item>
+                          <item>7</item>
+                          <item>15</item>
                         </items>
                       </object>
                       <packing>
@@ -2615,8 +2522,6 @@
                   <packing>
                     <property name="left_attach">1</property>
                     <property name="top_attach">1</property>
-                    <property name="width">1</property>
-                    <property name="height">1</property>
                   </packing>
                 </child>
                 <child>
@@ -2628,7 +2533,8 @@
                       <object class="GtkLabel" id="label13">
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
-                        <property name="label" translatable="yes">1:</property>
+                        <property name="label" translatable="yes">1</property>
+                        <property name="xalign">1</property>
                         <attributes>
                           <attribute name="weight" value="bold"/>
                         </attributes>
@@ -2645,15 +2551,15 @@
                         <property name="can_focus">False</property>
                         <property name="active_id">0</property>
                         <items>
-                          <item translatable="yes">0</item>
-                          <item translatable="yes">1</item>
-                          <item translatable="yes">2</item>
-                          <item translatable="yes">3</item>
-                          <item translatable="yes">4</item>
-                          <item translatable="yes">5</item>
-                          <item translatable="yes">6</item>
-                          <item translatable="yes">7</item>
-                          <item translatable="yes">15</item>
+                          <item>0</item>
+                          <item>1</item>
+                          <item>2</item>
+                          <item>3</item>
+                          <item>4</item>
+                          <item>5</item>
+                          <item>6</item>
+                          <item>7</item>
+                          <item>15</item>
                         </items>
                       </object>
                       <packing>
@@ -2666,8 +2572,6 @@
                   <packing>
                     <property name="left_attach">2</property>
                     <property name="top_attach">1</property>
-                    <property name="width">1</property>
-                    <property name="height">1</property>
                   </packing>
                 </child>
                 <child>
@@ -2679,7 +2583,8 @@
                       <object class="GtkLabel" id="label14">
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
-                        <property name="label" translatable="yes">2:</property>
+                        <property name="label" translatable="yes">2</property>
+                        <property name="xalign">1</property>
                         <attributes>
                           <attribute name="weight" value="bold"/>
                         </attributes>
@@ -2696,15 +2601,15 @@
                         <property name="can_focus">False</property>
                         <property name="active_id">0</property>
                         <items>
-                          <item translatable="yes">0</item>
-                          <item translatable="yes">1</item>
-                          <item translatable="yes">2</item>
-                          <item translatable="yes">3</item>
-                          <item translatable="yes">4</item>
-                          <item translatable="yes">5</item>
-                          <item translatable="yes">6</item>
-                          <item translatable="yes">7</item>
-                          <item translatable="yes">15</item>
+                          <item>0</item>
+                          <item>1</item>
+                          <item>2</item>
+                          <item>3</item>
+                          <item>4</item>
+                          <item>5</item>
+                          <item>6</item>
+                          <item>7</item>
+                          <item>15</item>
                         </items>
                       </object>
                       <packing>
@@ -2717,8 +2622,6 @@
                   <packing>
                     <property name="left_attach">3</property>
                     <property name="top_attach">1</property>
-                    <property name="width">1</property>
-                    <property name="height">1</property>
                   </packing>
                 </child>
                 <child>
@@ -2730,7 +2633,8 @@
                       <object class="GtkLabel" id="label15">
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
-                        <property name="label" translatable="yes">3:</property>
+                        <property name="label" translatable="yes">3</property>
+                        <property name="xalign">1</property>
                         <attributes>
                           <attribute name="weight" value="bold"/>
                         </attributes>
@@ -2747,15 +2651,15 @@
                         <property name="can_focus">False</property>
                         <property name="active_id">0</property>
                         <items>
-                          <item translatable="yes">0</item>
-                          <item translatable="yes">1</item>
-                          <item translatable="yes">2</item>
-                          <item translatable="yes">3</item>
-                          <item translatable="yes">4</item>
-                          <item translatable="yes">5</item>
-                          <item translatable="yes">6</item>
-                          <item translatable="yes">7</item>
-                          <item translatable="yes">15</item>
+                          <item>0</item>
+                          <item>1</item>
+                          <item>2</item>
+                          <item>3</item>
+                          <item>4</item>
+                          <item>5</item>
+                          <item>6</item>
+                          <item>7</item>
+                          <item>15</item>
                         </items>
                       </object>
                       <packing>
@@ -2768,8 +2672,6 @@
                   <packing>
                     <property name="left_attach">4</property>
                     <property name="top_attach">1</property>
-                    <property name="width">1</property>
-                    <property name="height">1</property>
                   </packing>
                 </child>
                 <child>
@@ -2781,7 +2683,8 @@
                       <object class="GtkLabel" id="label16">
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
-                        <property name="label" translatable="yes">4:</property>
+                        <property name="label" translatable="yes">4</property>
+                        <property name="xalign">1</property>
                         <attributes>
                           <attribute name="weight" value="bold"/>
                         </attributes>
@@ -2798,15 +2701,15 @@
                         <property name="can_focus">False</property>
                         <property name="active_id">0</property>
                         <items>
-                          <item translatable="yes">0</item>
-                          <item translatable="yes">1</item>
-                          <item translatable="yes">2</item>
-                          <item translatable="yes">3</item>
-                          <item translatable="yes">4</item>
-                          <item translatable="yes">5</item>
-                          <item translatable="yes">6</item>
-                          <item translatable="yes">7</item>
-                          <item translatable="yes">15</item>
+                          <item>0</item>
+                          <item>1</item>
+                          <item>2</item>
+                          <item>3</item>
+                          <item>4</item>
+                          <item>5</item>
+                          <item>6</item>
+                          <item>7</item>
+                          <item>15</item>
                         </items>
                       </object>
                       <packing>
@@ -2819,8 +2722,6 @@
                   <packing>
                     <property name="left_attach">5</property>
                     <property name="top_attach">1</property>
-                    <property name="width">1</property>
-                    <property name="height">1</property>
                   </packing>
                 </child>
                 <child>
@@ -2832,7 +2733,8 @@
                       <object class="GtkLabel" id="label17">
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
-                        <property name="label" translatable="yes">5:</property>
+                        <property name="label" translatable="yes">5</property>
+                        <property name="xalign">1</property>
                         <attributes>
                           <attribute name="weight" value="bold"/>
                         </attributes>
@@ -2849,15 +2751,15 @@
                         <property name="can_focus">False</property>
                         <property name="active_id">0</property>
                         <items>
-                          <item translatable="yes">0</item>
-                          <item translatable="yes">1</item>
-                          <item translatable="yes">2</item>
-                          <item translatable="yes">3</item>
-                          <item translatable="yes">4</item>
-                          <item translatable="yes">5</item>
-                          <item translatable="yes">6</item>
-                          <item translatable="yes">7</item>
-                          <item translatable="yes">15</item>
+                          <item>0</item>
+                          <item>1</item>
+                          <item>2</item>
+                          <item>3</item>
+                          <item>4</item>
+                          <item>5</item>
+                          <item>6</item>
+                          <item>7</item>
+                          <item>15</item>
                         </items>
                       </object>
                       <packing>
@@ -2870,8 +2772,6 @@
                   <packing>
                     <property name="left_attach">6</property>
                     <property name="top_attach">1</property>
-                    <property name="width">1</property>
-                    <property name="height">1</property>
                   </packing>
                 </child>
                 <child>
@@ -2883,7 +2783,8 @@
                       <object class="GtkLabel" id="label18">
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
-                        <property name="label" translatable="yes">6:</property>
+                        <property name="label" translatable="yes">6</property>
+                        <property name="xalign">1</property>
                         <attributes>
                           <attribute name="weight" value="bold"/>
                         </attributes>
@@ -2900,15 +2801,15 @@
                         <property name="can_focus">False</property>
                         <property name="active_id">0</property>
                         <items>
-                          <item translatable="yes">0</item>
-                          <item translatable="yes">1</item>
-                          <item translatable="yes">2</item>
-                          <item translatable="yes">3</item>
-                          <item translatable="yes">4</item>
-                          <item translatable="yes">5</item>
-                          <item translatable="yes">6</item>
-                          <item translatable="yes">7</item>
-                          <item translatable="yes">15</item>
+                          <item>0</item>
+                          <item>1</item>
+                          <item>2</item>
+                          <item>3</item>
+                          <item>4</item>
+                          <item>5</item>
+                          <item>6</item>
+                          <item>7</item>
+                          <item>15</item>
                         </items>
                       </object>
                       <packing>
@@ -2921,8 +2822,6 @@
                   <packing>
                     <property name="left_attach">7</property>
                     <property name="top_attach">1</property>
-                    <property name="width">1</property>
-                    <property name="height">1</property>
                   </packing>
                 </child>
                 <child>
@@ -2934,7 +2833,8 @@
                       <object class="GtkLabel" id="label19">
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
-                        <property name="label" translatable="yes">7:</property>
+                        <property name="label" translatable="yes">7</property>
+                        <property name="xalign">1</property>
                         <attributes>
                           <attribute name="weight" value="bold"/>
                         </attributes>
@@ -2951,15 +2851,15 @@
                         <property name="can_focus">False</property>
                         <property name="active_id">0</property>
                         <items>
-                          <item translatable="yes">0</item>
-                          <item translatable="yes">1</item>
-                          <item translatable="yes">2</item>
-                          <item translatable="yes">3</item>
-                          <item translatable="yes">4</item>
-                          <item translatable="yes">5</item>
-                          <item translatable="yes">6</item>
-                          <item translatable="yes">7</item>
-                          <item translatable="yes">15</item>
+                          <item>0</item>
+                          <item>1</item>
+                          <item>2</item>
+                          <item>3</item>
+                          <item>4</item>
+                          <item>5</item>
+                          <item>6</item>
+                          <item>7</item>
+                          <item>15</item>
                         </items>
                       </object>
                       <packing>
@@ -2972,17 +2872,15 @@
                   <packing>
                     <property name="left_attach">8</property>
                     <property name="top_attach">1</property>
-                    <property name="width">1</property>
-                    <property name="height">1</property>
                   </packing>
                 </child>
                 <child>
                   <object class="GtkLabel" id="label20">
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
-                    <property name="xalign">0</property>
                     <property name="label" translatable="yes">Enter the priority group ID for each User Priority.</property>
                     <property name="wrap">True</property>
+                    <property name="xalign">0</property>
                     <attributes>
                       <attribute name="style" value="italic"/>
                     </attributes>
@@ -2991,17 +2889,16 @@
                     <property name="left_attach">0</property>
                     <property name="top_attach">0</property>
                     <property name="width">9</property>
-                    <property name="height">1</property>
                   </packing>
                 </child>
                 <child>
                   <object class="GtkLabel" id="label22">
-                    <property name="margin_top">12</property>
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
-                    <property name="xalign">0</property>
-                    <property name="label" translatable="yes">Enter the allowed link bandwidth percent each Priority Group may use.  The sum of all groups must total 100%.</property>
+                    <property name="margin_top">12</property>
+                    <property name="label" translatable="yes">Enter the allowed link bandwidth percent each Priority Group may use. The sum of all groups must total 100%.</property>
                     <property name="wrap">True</property>
+                    <property name="xalign">0</property>
                     <attributes>
                       <attribute name="style" value="italic"/>
                     </attributes>
@@ -3010,17 +2907,16 @@
                     <property name="left_attach">0</property>
                     <property name="top_attach">2</property>
                     <property name="width">9</property>
-                    <property name="height">1</property>
                   </packing>
                 </child>
                 <child>
                   <object class="GtkLabel" id="label23">
-                    <property name="margin_top">12</property>
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
-                    <property name="xalign">0</property>
+                    <property name="margin_top">12</property>
                     <property name="label" translatable="yes">Enter the percentage of priority group bandwidth each user priority may use.</property>
                     <property name="wrap">True</property>
+                    <property name="xalign">0</property>
                     <attributes>
                       <attribute name="style" value="italic"/>
                     </attributes>
@@ -3029,17 +2925,16 @@
                     <property name="left_attach">0</property>
                     <property name="top_attach">4</property>
                     <property name="width">9</property>
-                    <property name="height">1</property>
                   </packing>
                 </child>
                 <child>
                   <object class="GtkLabel" id="label24">
-                    <property name="margin_top">12</property>
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
-                    <property name="xalign">0</property>
+                    <property name="margin_top">12</property>
                     <property name="label" translatable="yes">Enable or disable strict bandwidth for each user priority.</property>
                     <property name="wrap">True</property>
+                    <property name="xalign">0</property>
                     <attributes>
                       <attribute name="style" value="italic"/>
                     </attributes>
@@ -3048,17 +2943,16 @@
                     <property name="left_attach">0</property>
                     <property name="top_attach">6</property>
                     <property name="width">9</property>
-                    <property name="height">1</property>
                   </packing>
                 </child>
                 <child>
                   <object class="GtkLabel" id="label25">
-                    <property name="margin_top">12</property>
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
-                    <property name="xalign">0</property>
+                    <property name="margin_top">12</property>
                     <property name="label" translatable="yes">Enter the traffic class for each user priority.</property>
                     <property name="wrap">True</property>
+                    <property name="xalign">0</property>
                     <attributes>
                       <attribute name="style" value="italic"/>
                     </attributes>
@@ -3067,7 +2961,6 @@
                     <property name="left_attach">0</property>
                     <property name="top_attach">8</property>
                     <property name="width">9</property>
-                    <property name="height">1</property>
                   </packing>
                 </child>
               </object>

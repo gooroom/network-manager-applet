@@ -30,12 +30,8 @@
 
 #include "nma-mobile-providers.h"
 
-#ifndef MOBILE_BROADBAND_PROVIDER_INFO
-#define MOBILE_BROADBAND_PROVIDER_INFO DATADIR"/mobile-broadband-provider-info/serviceproviders.xml"
-#endif
-
-#define ISO_3166_COUNTRY_CODES ISO_CODES_PREFIX"/share/xml/iso-codes/iso_3166.xml"
-#define ISO_CODES_LOCALESDIR ISO_CODES_PREFIX"/share/locale"
+#define MOBILE_BROADBAND_PROVIDER_INFO "/mobile-broadband-provider-info/serviceproviders.xml"
+#define ISO_3166_COUNTRY_CODES "/xml/iso-codes/iso_3166.xml"
 
 /******************************************************************************/
 /* Access method type */
@@ -111,6 +107,7 @@ nma_mobile_access_method_unref (NMAMobileAccessMethod *method)
 
 /**
  * nma_mobile_access_method_get_name:
+ * @method: a #NMAMobileAccessMethod
  *
  * Returns: (transfer none): the name of the method.
  */
@@ -124,6 +121,7 @@ nma_mobile_access_method_get_name (NMAMobileAccessMethod *method)
 
 /**
  * nma_mobile_access_method_get_username:
+ * @method: a #NMAMobileAccessMethod
  *
  * Returns: (transfer none): the username.
  */
@@ -137,6 +135,7 @@ nma_mobile_access_method_get_username (NMAMobileAccessMethod *method)
 
 /**
  * nma_mobile_access_method_get_password:
+ * @method: a #NMAMobileAccessMethod
  *
  * Returns: (transfer none): the password.
  */
@@ -150,6 +149,7 @@ nma_mobile_access_method_get_password (NMAMobileAccessMethod *method)
 
 /**
  * nma_mobile_access_method_get_gateway:
+ * @method: a #NMAMobileAccessMethod
  *
  * Returns: (transfer none): the gateway.
  */
@@ -163,6 +163,7 @@ nma_mobile_access_method_get_gateway (NMAMobileAccessMethod *method)
 
 /**
  * nma_mobile_access_method_get_dns:
+ * @method: a #NMAMobileAccessMethod
  *
  * Returns: (transfer none) (array zero-terminated=1) (element-type utf8): the list of DNS.
  */
@@ -176,6 +177,7 @@ nma_mobile_access_method_get_dns (NMAMobileAccessMethod *method)
 
 /**
  * nma_mobile_access_method_get_3gpp_apn:
+ * @method: a #NMAMobileAccessMethod
  *
  * Returns: (transfer none): the 3GPP APN.
  */
@@ -189,6 +191,7 @@ nma_mobile_access_method_get_3gpp_apn (NMAMobileAccessMethod *method)
 
 /**
  * nma_mobile_access_method_get_family:
+ * @method: a #NMAMobileAccessMethod
  *
  * Returns: a #NMAMobileFamily.
  */
@@ -253,8 +256,7 @@ nma_mobile_provider_unref (NMAMobileProvider *provider)
 		g_free (provider->name);
 		g_hash_table_destroy (provider->lcl_names);
 
-		g_slist_foreach (provider->methods, (GFunc) nma_mobile_access_method_unref, NULL);
-		g_slist_free (provider->methods);
+		g_slist_free_full (provider->methods, (GDestroyNotify) nma_mobile_access_method_unref);
 
 		if (provider->mcc_mnc)
 			g_ptr_array_unref (provider->mcc_mnc);
@@ -268,6 +270,7 @@ nma_mobile_provider_unref (NMAMobileProvider *provider)
 
 /**
  * nma_mobile_provider_get_name:
+ * @provider: a #NMAMobileProvider
  *
  * Returns: (transfer none): the name of the provider.
  */
@@ -378,19 +381,24 @@ nma_country_info_unref (NMACountryInfo *country_info)
 
 /**
  * nma_country_info_get_country_code:
+ * @country_info: a #NMACountryInfo
  *
- * Returns: (transfer none): the code of the country.
+ * Returns: (transfer none): the code of the country or %NULL for "Unknown".
  */
 const gchar *
 nma_country_info_get_country_code (NMACountryInfo *country_info)
 {
 	g_return_val_if_fail (country_info != NULL, NULL);
 
+	if (country_info->country_code[0] == '\0')
+		return NULL;
+
 	return country_info->country_code;
 }
 
 /**
  * nma_country_info_get_country_name:
+ * @country_info: a #NMACountryInfo
  *
  * Returns: (transfer none): the name of the country.
  */
@@ -404,6 +412,7 @@ nma_country_info_get_country_name (NMACountryInfo *country_info)
 
 /**
  * nma_country_info_get_providers:
+ * @country_info: a #NMACountryInfo
  *
  * Returns: (element-type NMAMobileProvider) (transfer none): the
  *	 list of #NMAMobileProvider this country exposes.
@@ -470,44 +479,38 @@ static const GMarkupParser iso_3166_parser = {
 	NULL  /* error */
 };
 
-static GHashTable *
-read_country_codes (const gchar *country_codes_file,
+static gboolean
+read_country_codes (GHashTable *table,
+                    const gchar *country_codes_file,
                     GCancellable *cancellable,
                     GError **error)
 {
-	GHashTable *table = NULL;
 	GMarkupParseContext *ctx;
 	char *buf;
 	gsize buf_len;
 
 	/* Set domain to iso_3166 for country name translation */
-	bindtextdomain ("iso_3166", ISO_CODES_LOCALESDIR);
+	bindtextdomain ("iso_3166", ISO_CODES_PREFIX "/locale");
 	bind_textdomain_codeset ("iso_3166", "UTF-8");
 
 	if (!g_file_get_contents (country_codes_file, &buf, &buf_len, error)) {
 		g_prefix_error (error,
 		                "Failed to load '%s' from 'iso-codes': ",
 		                country_codes_file);
-		return NULL;
+		return FALSE;
 	}
-
-	table = g_hash_table_new_full (g_str_hash,
-	                               g_str_equal,
-	                               g_free,
-	                               (GDestroyNotify)nma_country_info_unref);
 
 	ctx = g_markup_parse_context_new (&iso_3166_parser, 0, table, NULL);
 	if (!g_markup_parse_context_parse (ctx, buf, buf_len, error)) {
 		g_prefix_error (error,
 		                "Failed to parse '%s' from 'iso-codes': ",
 		                country_codes_file);
-		g_hash_table_destroy (table);
-		return NULL;
+		return FALSE;
 	}
 
 	g_markup_parse_context_free (ctx);
 	g_free (buf);
-	return table;
+	return TRUE;
 }
 
 /******************************************************************************/
@@ -526,8 +529,8 @@ typedef enum {
 typedef struct {
 	GHashTable *table;
 
-	char *current_country;
-	GSList *current_providers;
+	NMACountryInfo *current_country;
+	char *country_code;
 	NMAMobileProvider *current_provider;
 	NMAMobileAccessMethod *current_method;
 
@@ -535,15 +538,18 @@ typedef struct {
 	MobileContextState state;
 } MobileParser;
 
-static void
-provider_list_free (gpointer data)
+static NMACountryInfo *
+lookup_country (GHashTable *table, const char *country_code)
 {
-	GSList *list = (GSList *) data;
+	NMACountryInfo *country_info;
 
-	while (list) {
-		nma_mobile_provider_unref ((NMAMobileProvider *) list->data);
-		list = g_slist_delete_link (list, list);
+	country_info = g_hash_table_lookup (table, country_code);
+	if (!country_info) {
+		g_warning ("%s: adding providers for unknown country '%s'", __func__, country_code);
+		country_info = g_hash_table_lookup (table, "");
 	}
+
+	return country_info;
 }
 
 static void
@@ -568,19 +574,9 @@ parser_toplevel_start (MobileParser *parser,
 	} else if (!strcmp (name, "country")) {
 		for (i = 0; attribute_names && attribute_names[i]; i++) {
 			if (!strcmp (attribute_names[i], "code")) {
-				char *country_code;
-				NMACountryInfo *country_info;
-
-				country_code = g_ascii_strup (attribute_values[i], -1);
-				country_info = g_hash_table_lookup (parser->table, country_code);
-				/* Ensure we have a country provider for this country code */
-				if (!country_info) {
-					g_warning ("%s: adding providers for unknown country '%s'", __func__, country_code);
-					country_info = country_info_new (country_code, NULL);
-					g_hash_table_insert (parser->table, country_code, country_info);
-				}
-				parser->current_country = country_code;
-
+				g_free (parser->country_code);
+				parser->country_code = g_ascii_strup (attribute_values[i], -1);
+				parser->current_country = lookup_country (parser->table, parser->country_code);
 				parser->state = PARSER_COUNTRY;
 				break;
 			}
@@ -723,17 +719,9 @@ parser_country_end (MobileParser *parser,
                     const char *name)
 {
 	if (!strcmp (name, "country")) {
-		NMACountryInfo *country_info;
-
-		country_info = g_hash_table_lookup (parser->table, parser->current_country);
-		g_assert (country_info);
-
-		/* Store providers for this country */
-		country_info->providers = parser->current_providers;
-
-		g_free (parser->current_country);
 		parser->current_country = NULL;
-		parser->current_providers = NULL;
+		g_free (parser->country_code);
+		parser->country_code = NULL;
 		g_free (parser->text_buffer);
 		parser->text_buffer = NULL;
 		parser->state = PARSER_TOPLEVEL;
@@ -747,7 +735,14 @@ parser_provider_end (MobileParser *parser,
 	if (!strcmp (name, "name")) {
 		if (!parser->current_provider->name) {
 			/* Use the first one. */
-			parser->current_provider->name = parser->text_buffer;
+			if (nma_country_info_get_country_code (parser->current_country)) {
+				parser->current_provider->name = parser->text_buffer;
+			} else {
+				parser->current_provider->name = g_strdup_printf ("%s (%s)",
+				                                                  parser->text_buffer,
+				                                                  parser->country_code);
+				g_free (parser->text_buffer);
+			}
 			parser->text_buffer = NULL;
 		}
 	} else if (!strcmp (name, "provider")) {
@@ -756,7 +751,8 @@ parser_provider_end (MobileParser *parser,
 
 		parser->current_provider->methods = g_slist_reverse (parser->current_provider->methods);
 
-		parser->current_providers = g_slist_prepend (parser->current_providers, parser->current_provider);
+		parser->current_country->providers = g_slist_prepend (parser->current_country->providers,
+		                                                      parser->current_provider);
 		parser->current_provider = NULL;
 		g_free (parser->text_buffer);
 		parser->text_buffer = NULL;
@@ -917,7 +913,7 @@ read_service_providers (GHashTable *countries,
 	gsize len = 0;
 
 	memset (&parser, 0, sizeof (MobileParser));
-    parser.table = countries;
+	parser.table = countries;
 
 	channel = g_io_channel_new_file (service_providers, "r", error);
 	if (!channel) {
@@ -968,12 +964,6 @@ read_service_providers (GHashTable *countries,
 		nma_mobile_provider_unref (parser.current_provider);
 	}
 
-	if (parser.current_providers) {
-		g_warning ("pending current providers");
-		provider_list_free (parser.current_providers);
-	}
-
-	g_free (parser.current_country);
 	g_free (parser.text_buffer);
 
 	return (status == G_IO_STATUS_EOF);
@@ -986,25 +976,77 @@ mobile_providers_parse_sync (const gchar *country_codes,
                              GError **error)
 {
 	GHashTable *countries;
+	char *path;
+	const gchar * const *dirs;
+	int i;
+	gboolean success;
+
+	dirs = g_get_system_data_dirs ();
+	countries = g_hash_table_new_full (g_str_hash,
+                                           g_str_equal,
+                                           g_free,
+                                           (GDestroyNotify)nma_country_info_unref);
+
+	g_hash_table_insert (countries, g_strdup (""),
+	                     country_info_new ("", _("My country is not listed")));
 
 	/* Use default paths if none given */
-	if (!country_codes)
-		country_codes = ISO_3166_COUNTRY_CODES;
-	if (!service_providers)
-		service_providers = MOBILE_BROADBAND_PROVIDER_INFO;
+	if (country_codes) {
+		if (!read_country_codes (countries, country_codes, cancellable, error)) {
+			g_hash_table_unref (countries);
+			return FALSE;
+		}
+	} else {
+		/* First try the user override file. */
+		path = g_build_filename (g_get_user_data_dir (), ISO_3166_COUNTRY_CODES, NULL);
+		success = read_country_codes (countries, path, cancellable, NULL);
+		g_free (path);
 
-	countries = read_country_codes (country_codes,
-	                                cancellable,
-	                                error);
-	if (!countries)
-		return NULL;
+		/* Look in system locations. */
+		for (i = 0; dirs[i] && !success; i++) {
+			path = g_build_filename (dirs[i], ISO_3166_COUNTRY_CODES, NULL);
+			success = read_country_codes (countries, path, cancellable, NULL);
+			g_free (path);
+		}
 
-	if (!read_service_providers (countries,
-	                             service_providers,
-	                             cancellable,
-	                             error)) {
-		g_hash_table_unref (countries);
-		return NULL;
+		if (!success) {
+			path = g_build_filename (ISO_CODES_PREFIX, "share", ISO_3166_COUNTRY_CODES, NULL);
+			success = read_country_codes (countries, path, cancellable, NULL);
+			g_free (path);
+		}
+
+		if (!success) {
+			g_warning ("Could not find the country codes file (%s): check your installation\n",
+			           ISO_3166_COUNTRY_CODES);
+		}
+	}
+
+	if (service_providers) {
+		if (!read_service_providers (countries, service_providers, cancellable, error)) {
+			g_hash_table_unref (countries);
+			return FALSE;
+		}
+	} else {
+		/* First try the user override file. */
+		path = g_build_filename (g_get_user_data_dir (), MOBILE_BROADBAND_PROVIDER_INFO, NULL);
+		success = read_service_providers (countries, path, cancellable, NULL);
+		g_free (path);
+
+		/* Look in system locations. */
+		for (i = 0; dirs[i] && !success; i++) {
+			path = g_build_filename (dirs[i], MOBILE_BROADBAND_PROVIDER_INFO, NULL);
+			success = read_service_providers (countries, path, cancellable, NULL);
+			g_free (path);
+		}
+
+		if (!success) {
+			success = read_service_providers (countries, MOBILE_BROADBAND_PROVIDER_INFO_DATABASE, cancellable, NULL);
+		}
+
+		if (!success) {
+			g_warning ("Could not find the provider data (%s): check your installation\n",
+			           MOBILE_BROADBAND_PROVIDER_INFO);
+		}
 	}
 
 	return countries;
@@ -1134,7 +1176,7 @@ struct _NMAMobileProvidersDatabasePrivate {
  * @self: a #NMAMobileProvidersDatabase.
  *
  * Returns: (element-type utf8 NMACountryInfo) (transfer none): a
- *	 hash table where keys are country names #gchar and values are #NMACountryInfos.
+ *	 hash table where keys are country names #gchar and values are #NMACountryInfo.
  */
 GHashTable *
 nma_mobile_providers_database_get_countries (NMAMobileProvidersDatabase *self)
