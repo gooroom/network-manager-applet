@@ -5,7 +5,7 @@ include /usr/share/dpkg/architecture.mk
 export DEB_LDFLAGS_MAINT_APPEND = -Wl,-z,defs -Wl,--as-needed
 
 %:
-	dh $@ --with gir,translations
+	dh $@ --with gir
 
 override_dh_autoreconf:
 	dh_autoreconf --as-needed
@@ -19,7 +19,6 @@ override_dh_auto_configure:
 		--enable-gtk-doc \
 		--with-appindicator=ubuntu \
 		--with-gcr \
-		--with-libnm-gtk \
 		--with-selinux \
 		--with-wwan
 

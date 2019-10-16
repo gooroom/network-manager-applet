@@ -10,3 +10,4 @@ Support-hiding-rather-than-desensitizing-disallowed-items.patch
 git_wrong_free.patch
 git_desktop_category.patch
 git_password_entry.patch
+gooroom_ko.po.patch

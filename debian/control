@@ -5,7 +5,6 @@ Maintainer: Ubuntu Developers <ubuntu-devel-discuss@lists.ubuntu.com>
 XSBC-Original-Maintainer: Utopia Maintenance Team <pkg-utopia-maintainers@lists.alioth.debian.org>
 Uploaders: Michael Biebl <biebl@debian.org>
 Build-Depends: debhelper (>= 11),
-               dh-translations,
                gnome-common,
                intltool,
                mobile-broadband-provider-info,
@@ -13,9 +12,6 @@ Build-Depends: debhelper (>= 11),
                libgtk-3-dev (>= 3.10),
                libglib2.0-dev (>= 2.38),
                libnotify-dev (>= 0.7),
-               libnm-util-dev (>= 1.8),
-               libnm-glib-dev (>= 1.8),
-               libnm-glib-vpn-dev (>= 1.8),
                network-manager-dev (>= 1.8),
                libappindicator3-dev,
                libdbusmenu-gtk3-dev (>= 16.04.0),
@@ -80,22 +76,6 @@ Depends: ${shlibs:Depends},
          ${misc:Depends},
 Description: library for wireless and mobile dialogs (libnm-glib version)
  This library provides Gtk+ dialogs for NetworkManager.
-
-Package: libnm-gtk-dev
-Architecture: linux-any
-Multi-Arch: same
-Section: libdevel
-Depends: ${shlibs:Depends},
-         ${misc:Depends},
-         libnm-gtk0 (= ${binary:Version}),
-         network-manager-dev (>= 1.8),
-         libnm-util-dev (>= 1.8),
-         libnm-glib-dev (>= 1.8),
-         libgtk-3-dev
-Description: library for wireless and mobile dialogs - development files
- The libnm-gtk library provides Gtk+ dialogs for NetworkManager.
- .
- This package contains the development files.
 
 Package: libnma0
 Architecture: linux-any
