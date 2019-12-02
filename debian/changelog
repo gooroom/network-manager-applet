@@ -1,3 +1,15 @@
+network-manager-applet (1.8.22-2ubuntu1+grm2u1) eoan; urgency=medium
+
+  [ junsungc ]
+  * [877e0436] Merged Modify ko.po file to translate
+
+  [ jongkyung.woo ]
+  * [6e814aa6] Disabled gooroom-ko.patch
+
+  [ Gooroom Autobuilder ]
+
+ -- Gooroom Autobuilder <jenkins@gooroom.kr>  Mon, 02 Dec 2019 13:02:02 +0900
+
 network-manager-applet (1.8.22-2ubuntu1) eoan; urgency=medium
 
   * Resynchronize on Debian
