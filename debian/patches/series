@@ -6,3 +6,4 @@ Have-the-appindicator-enabled-by-default.patch
 Make-policykit-restricted-actions-insensitive.patch
 Support-hiding-rather-than-desensitizing-disallowed-items.patch
 #gooroom_ko.po.patch
+gooroom-modify-glade-margin.patch
