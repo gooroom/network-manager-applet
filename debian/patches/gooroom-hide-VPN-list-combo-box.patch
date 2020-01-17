@@ -1,0 +1,24 @@
+diff --git a/src/connection-editor/page-general.c b/src/connection-editor/page-general.c
+index e6aaec2..4d6edef 100644
+--- a/src/connection-editor/page-general.c
++++ b/src/connection-editor/page-general.c
+@@ -198,7 +198,11 @@ vpn_checkbox_toggled (GtkToggleButton *button, gpointer user_data)
+ {
+ 	CEPageGeneralPrivate *priv = CE_PAGE_GENERAL_GET_PRIVATE (user_data);
+ 
++	gboolean any_dependent_vpn = !!nm_setting_connection_get_num_secondaries (priv->setting);
++	gtk_widget_set_visible (GTK_WIDGET (priv->dependent_vpn), any_dependent_vpn);
++
+ 	gtk_widget_set_sensitive (GTK_WIDGET (priv->dependent_vpn), gtk_toggle_button_get_active (priv->dependent_vpn_checkbox));
++
+ 	ce_page_changed (CE_PAGE (user_data));
+ }
+ 
+@@ -338,6 +342,7 @@ finish_setup (CEPageGeneral *self, gpointer user_data)
+ 	gtk_toggle_button_set_active (priv->dependent_vpn_checkbox, any_dependent_vpn);
+ 	g_signal_connect (priv->dependent_vpn_checkbox, "toggled", G_CALLBACK (vpn_checkbox_toggled), self);
+ 	gtk_widget_set_sensitive (GTK_WIDGET (priv->dependent_vpn), any_dependent_vpn);
++	gtk_widget_set_visible (GTK_WIDGET (priv->dependent_vpn), any_dependent_vpn);
+ 	g_signal_connect (priv->dependent_vpn, "changed", G_CALLBACK (stuff_changed), self);
+ 
+ 	g_signal_connect (priv->autoconnect, "toggled", G_CALLBACK (autoconnect_checkbox_toggled), self);
