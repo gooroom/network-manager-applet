@@ -8,3 +8,4 @@ Support-hiding-rather-than-desensitizing-disallowed-items.patch
 #gooroom_ko.po.patch
 gooroom-modify-glade-margin.patch
 gooroom-hide-VPN-list-combo-box.patch
+gooroom-addr-delete-button-sensitive.patch
