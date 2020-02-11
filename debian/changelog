@@ -1,3 +1,16 @@
+network-manager-applet (1.8.22-2ubuntu1+grm2u2) eoan; urgency=medium
+
+  [ cjheo ]
+  * [c82b2a84] Added patch that have removed the margin property from ui files
+  * [1eddba7f] 연결편집에서 '자동으로 가상 사설망에 연결'체크시 VPN 목록이 없으면 목록을 표시하는 콤보박스를 숨기도록 설정
+  * [0172a319] 네트워크 연결편집 화면의 IPv4 및 IPv6 설정에서 방식(Method) 변경시 삭제버튼 활성/비활성 오류 수정
+  * [4aa57d17] gooroom-hide-VPN-list-combo-box.patch 오류 수정
+  * [f0d006aa] [Bug:1913] 와이파이 연결 편집 시 채널에 대한 범위 설정
+
+  [ Gooroom Autobuilder ]
+
+ -- Gooroom Autobuilder <jenkins@gooroom.kr>  Tue, 11 Feb 2020 11:44:51 +0900
+
 network-manager-applet (1.8.22-2ubuntu1+grm2u1) eoan; urgency=medium
 
   [ junsungc ]
