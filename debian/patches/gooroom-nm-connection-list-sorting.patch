@@ -1,0 +1,13 @@
+diff --git a/src/connection-editor/nm-connection-list.c b/src/connection-editor/nm-connection-list.c
+index c5d0932..38b71d4 100644
+--- a/src/connection-editor/nm-connection-list.c
++++ b/src/connection-editor/nm-connection-list.c
+@@ -778,7 +778,7 @@ initialize_treeview (NMConnectionList *self)
+ 
+ 	/* Sortable */
+ 	priv->sortable = GTK_TREE_SORTABLE (gtk_tree_model_sort_new_with_model (GTK_TREE_MODEL (priv->filter)));
+-	gtk_tree_sortable_set_default_sort_func (priv->sortable, NULL, NULL, NULL);
++//	gtk_tree_sortable_set_default_sort_func (priv->sortable, NULL, NULL, NULL);
+ 	gtk_tree_sortable_set_sort_func (priv->sortable, COL_TIMESTAMP, timestamp_sort_func,
+ 	                                 priv->sortable, NULL);
+ 	gtk_tree_sortable_set_sort_func (priv->sortable, COL_ID, id_sort_func,
