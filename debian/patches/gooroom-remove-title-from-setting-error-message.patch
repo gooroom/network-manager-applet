@@ -1,0 +1,14 @@
+diff --git a/src/connection-editor/nm-connection-editor.c b/src/connection-editor/nm-connection-editor.c
+index 46b7c53..0420fc0 100644
+--- a/src/connection-editor/nm-connection-editor.c
++++ b/src/connection-editor/nm-connection-editor.c
+@@ -370,7 +370,8 @@ connection_editor_validate (NMConnectionEditor *editor)
+ 		if (!ce_page_validate (CE_PAGE (iter->data), editor->connection, &error)) {
+ 			if (!validation_error) {
+ 				validation_error = g_strdup_printf (_("Invalid setting %s: %s"),
+-				                                    CE_PAGE (iter->data)->title,
++//				                                    CE_PAGE (iter->data)->title,
++                                                    "",
+ 				                                    error->message);
+ 			}
+ 			g_clear_error (&error);
