@@ -13,3 +13,4 @@ gooroom-wifi-channel-set-range.patch
 gooroom-nm-connection-list-sorting.patch
 gooroom-wifi-refresh-channel-when-mode-changed.patch
 gooroom-remove-title-from-setting-error-message.patch
+gooroom-do-not-show-detail-error-message.patch

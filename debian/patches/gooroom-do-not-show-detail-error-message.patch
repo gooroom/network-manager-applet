@@ -1,0 +1,25 @@
+diff --git a/src/utils/utils.c b/src/utils/utils.c
+index 694ef71..c5ccfd4 100644
+--- a/src/utils/utils.c
++++ b/src/utils/utils.c
+@@ -199,13 +199,16 @@ utils_show_error_dialog (const char *title,
+ 	                                     GTK_DIALOG_DESTROY_WITH_PARENT,
+ 	                                     GTK_MESSAGE_ERROR,
+ 	                                     GTK_BUTTONS_CLOSE,
+-	                                     "%s",
+-	                                     text1);
++	                                     NULL);
+ 
+ 	gtk_window_set_position (GTK_WINDOW (err_dialog), GTK_WIN_POS_CENTER_ALWAYS);
+ 
+-	if (text2)
+-		gtk_message_dialog_format_secondary_text (GTK_MESSAGE_DIALOG (err_dialog), "%s", text2);
++	if (text1) {
++		char *markup = g_strconcat ("<span weight=\"bold\" size=\"larger\">", text1, "</span>", NULL);
++		gtk_message_dialog_format_secondary_markup (GTK_MESSAGE_DIALOG (err_dialog), "%s", markup);
++		g_free (markup);
++	}
++
+ 	if (title)
+ 		gtk_window_set_title (GTK_WINDOW (err_dialog), title);
+ 
