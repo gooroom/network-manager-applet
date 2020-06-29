@@ -1,0 +1,27 @@
+From bbafe32f9cb35f01d7903a647b1199d7f70c3851 Mon Sep 17 00:00:00 2001
+From: HaeRyong Jeong <jeong89@gooroom.kr>
+Date: Mon, 29 Jun 2020 19:06:10 +0900
+Subject: [PATCH] Reload when it removed network
+
+Change-Id: I5658e8b7e5ed40feee7d2fed1b74c2f96fa54f9e
+---
+ src/applet.c | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/src/applet.c b/src/applet.c
+index 453a4b6..9513a7e 100644
+--- a/src/applet.c
++++ b/src/applet.c
+@@ -3440,6 +3440,9 @@ register_agent (NMApplet *applet)
+ 		g_signal_connect_swapped (applet->nm_client, NM_CLIENT_CONNECTION_ADDED,
+ 		                          G_CALLBACK (applet_schedule_update_menu),
+ 		                          applet);
++		g_signal_connect_swapped (applet->nm_client, NM_CLIENT_CONNECTION_REMOVED,
++		                          G_CALLBACK (applet_schedule_update_menu),
++		                          applet);
+ 	}
+ }
+ 
+-- 
+2.20.1
+
