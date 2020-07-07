@@ -1,3 +1,21 @@
+network-manager-applet (1.8.22-2ubuntu1+grm2u3) eoan; urgency=medium
+
+  [ cjheo ]
+  * [d44a04de] [Bug:2077]네트워크 연결편집 다이얼로그의 컬럼 정렬 미동작 수정
+  * [fa694173] [Bug:2414] Update channels when changing mode in wifi settings dialog
+  * [6d0f584b] Remove error title from setting error message
+  * [49cb95e0] Don't show detail error message from error dialog
+
+  [ HaeRyong Jeong ]
+  * [e088f498] [Bug:1968] Fixed tray menu reload when it removed network in dialog
+
+  [ donghun ]
+  * [fbcb4553] [Bug:2369] Added patch to disable gateway when adding IPv4 or IPv6 address
+
+  [ Gooroom Autobuilder ]
+
+ -- Gooroom Autobuilder <jenkins@gooroom.kr>  Tue, 07 Jul 2020 16:06:20 +0900
+
 network-manager-applet (1.8.22-2ubuntu1+grm2u2) eoan; urgency=medium
 
   [ cjheo ]
