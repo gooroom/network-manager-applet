@@ -1,0 +1,27 @@
+diff --git a/po/ko.po b/po/ko.po
+index 505e640..7fcad2b 100644
+--- a/po/ko.po
++++ b/po/ko.po
+@@ -3313,6 +3313,10 @@ msgstr "연결 제거가 실패했습니다"
+ msgid "Are you sure you wish to delete the connection %s?"
+ msgstr "%s 연결을 정말로 제거하시겠습니까?"
+ 
++#: src/connection-editor/connection-helpers.c:763
++msgid "Connection delete"
++msgstr "연결 제거"
++
+ #: src/connection-editor/gtk/menus.ui:6
+ #, fuzzy
+ msgid "_New Connection"
+diff --git a/src/connection-editor/connection-helpers.c b/src/connection-editor/connection-helpers.c
+index a38217e..36f3895 100644
+--- a/src/connection-editor/connection-helpers.c
++++ b/src/connection-editor/connection-helpers.c
+@@ -760,6 +760,7 @@ delete_connection (GtkWindow *parent_window,
+ 	                        _("_Delete"), GTK_RESPONSE_YES,
+ 	                        NULL);
+ 
++    gtk_window_set_title (GTK_WINDOW(dialog), _("Connection delete"));
+ 	result = gtk_dialog_run (GTK_DIALOG (dialog));
+ 	gtk_widget_destroy (dialog);
+ 
