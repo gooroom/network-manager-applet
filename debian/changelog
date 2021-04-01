@@ -1,3 +1,12 @@
+network-manager-applet (1.8.22-2ubuntu1+grm2u5) eoan; urgency=medium
+
+  [ boyeon.choi ]
+  * [b18f755c] [Bug:2570] Specified the title for the connection delete dialog
+
+  [ Gooroom Autobuilder ]
+
+ -- Gooroom Autobuilder <jenkins@gooroom.kr>  Thu, 01 Apr 2021 14:47:49 +0900
+
 network-manager-applet (1.8.22-2ubuntu1+grm2u4) eoan; urgency=medium
 
   [ HaeRyong Jeong ]
