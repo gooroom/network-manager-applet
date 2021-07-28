@@ -1,19 +1,5 @@
-/* -*- Mode: C; tab-width: 4; indent-tabs-mode: t; c-basic-offset: 4 -*- */
+// SPDX-License-Identifier: GPL-2.0+
 /* NetworkManager Applet -- allow user control over networking
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * Copyright 2004 - 2014 Red Hat, Inc.
  * Copyright 2005 - 2008 Novell, Inc.
@@ -53,6 +39,12 @@
 #define NM_IS_APPLET(object)        (G_TYPE_CHECK_INSTANCE_TYPE((object), NM_TYPE_APPLET))
 #define NM_IS_APPLET_CLASS(klass)   (G_TYPE_CHECK_CLASS_TYPE((klass), NM_TYPE_APPLET))
 #define NM_APPLET_GET_CLASS(object) (G_TYPE_INSTANCE_GET_CLASS((object), NM_TYPE_APPLET, NMAppletClass))
+
+#ifdef WITH_APPINDICATOR
+#define INDICATOR_ENABLED(a) ((a)->app_indicator)
+#else
+#define INDICATOR_ENABLED(a) (FALSE)
+#endif  /* WITH_APPINDICATOR */
 
 typedef struct {
 	GApplicationClass parent_class;
@@ -123,6 +115,7 @@ typedef struct {
 	/* Direct UI elements */
 #ifdef WITH_APPINDICATOR
 	AppIndicator *  app_indicator;
+	bool            app_indicator_show_signal_received;
 #endif
 	guint           update_menu_id;
 
@@ -193,7 +186,7 @@ struct NMADeviceClass {
 	                                        AppletNewAutoConnectionCallback callback,
 	                                        gpointer callback_data);
 
-	void           (*add_menu_item)        (NMDevice *device,
+	gboolean       (*add_menu_item)        (NMDevice *device,
 	                                        gboolean multiple_devices,
 	                                        const GPtrArray *connections,
 	                                        NMConnection *active,

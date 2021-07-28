@@ -1,19 +1,5 @@
-/* -*- Mode: C; tab-width: 4; indent-tabs-mode: t; c-basic-offset: 4 -*- */
+// SPDX-License-Identifier: GPL-2.0+
 /* NetworkManager Applet -- allow user control over networking
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * (C) Copyright 2012 Aleksander Morgado <aleksander@gnu.org>
  */
@@ -712,7 +698,7 @@ add_connection_item (NMDevice *device,
 	gtk_widget_show (item);
 }
 
-static void
+static gboolean
 add_menu_item (NMDevice *device,
                gboolean multiple_devices,
                const GPtrArray *connections,
@@ -729,7 +715,7 @@ add_menu_item (NMDevice *device,
 	if (!info) {
 		g_warning ("ModemManager is not available for modem at %s",
 		           nm_device_get_udi (device));
-		return;
+		return FALSE;
 	}
 
 	if (multiple_devices) {
@@ -808,6 +794,8 @@ add_menu_item (NMDevice *device,
 			add_connection_item (device, NULL, item, menu, applet);
 		}
 	}
+
+	return TRUE;
 }
 
 /********************************************************************/

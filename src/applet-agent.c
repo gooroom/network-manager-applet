@@ -1,20 +1,6 @@
-/* -*- Mode: C; tab-width: 4; indent-tabs-mode: t; c-basic-offset: 4 -*- */
+// SPDX-License-Identifier: GPL-2.0+
 /*
  * Dan Williams <dcbw@redhat.com>
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * Copyright 2011 - 2014 Red Hat, Inc.
  */
@@ -377,7 +363,7 @@ keyring_find_secrets_cb (GObject *source,
 	 */
 	g_variant_builder_init (&builder_connection, NM_VARIANT_TYPE_CONNECTION);
 	g_variant_builder_add (&builder_connection, "{sa{sv}}", r->setting_name, &builder_setting);
-	settings = g_variant_builder_end (&builder_connection);
+	settings = g_variant_ref_sink (g_variant_builder_end (&builder_connection));
 
 done:
 	g_list_free_full (list, g_object_unref);

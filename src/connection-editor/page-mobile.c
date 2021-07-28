@@ -1,21 +1,7 @@
-/* -*- Mode: C; tab-width: 4; indent-tabs-mode: t; c-basic-offset: 4 -*- */
+// SPDX-License-Identifier: GPL-2.0+
 /* NetworkManager Connection editor -- Connection editor for NetworkManager
  *
  * Dan Williams <dcbw@redhat.com>
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * Copyright 2008 - 2017 Red Hat, Inc.
  */
@@ -88,7 +74,11 @@ populate_gsm_ui (CEPageMobile *self, NMConnection *connection)
 	NMSettingGsm *setting = NM_SETTING_GSM (priv->setting);
 	const char *s;
 
+	/* FIXME: no longer use gsm.number property. It's deprecated and has
+	 * no effect for NetworkManager. */
+	G_GNUC_BEGIN_IGNORE_DEPRECATIONS
 	s = nm_setting_gsm_get_number (setting);
+	G_GNUC_END_IGNORE_DEPRECATIONS
 	if (s)
 		gtk_entry_set_text (priv->number, s);
 

@@ -1,19 +1,5 @@
-/* -*- Mode: C; tab-width: 4; indent-tabs-mode: t; c-basic-offset: 4 -*- */
+// SPDX-License-Identifier: GPL-2.0+
 /* NetworkManager Connection editor -- Connection editor for NetworkManager
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * Copyright 2017 Red Hat, Inc.
  */
@@ -37,6 +23,7 @@
 #include "page-bridge.h"
 #include "page-vlan.h"
 #include "page-vpn.h"
+#include "page-wireguard.h"
 #include "vpn-helpers.h"
 #include "nm-utils/nm-vpn-editor-plugin-call.h"
 
@@ -120,6 +107,7 @@ get_connection_type_list (void)
 	add_type_data_virtual (array, _("VLAN"), vlan_connection_new, NM_TYPE_SETTING_VLAN);
 	add_type_data_virtual (array, _("IP tunnel"), ip_tunnel_connection_new, NM_TYPE_SETTING_IP_TUNNEL);
 	add_type_data_virtual (array, _("MACsec"), macsec_connection_new, NM_TYPE_SETTING_MACSEC);
+	add_type_data_virtual (array, _("WireGuard"), wireguard_connection_new, NM_TYPE_SETTING_WIREGUARD);
 
 	add_type_data_virtual (array, _("VPN"), vpn_connection_new, NM_TYPE_SETTING_VPN);
 

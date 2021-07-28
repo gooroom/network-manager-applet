@@ -1,4 +1,3 @@
-/* -*- Mode: C; tab-width: 4; indent-tabs-mode: t; c-basic-offset: 4 -*- */
 /*
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -379,9 +378,12 @@ _nm_g_hash_table_get_keys_as_array (GHashTable *hash_table,
                                __VA_ARGS__)
 #endif
 
-#if !GLIB_CHECK_VERSION(2, 44, 0)
+#if defined(g_steal_pointer)
+#undef g_steal_pointer
+#endif
+
 static inline gpointer
-g_steal_pointer (gpointer pp)
+_g_steal_pointer (gpointer pp)
 {
 	gpointer *ptr = (gpointer *) pp;
 	gpointer ref;
@@ -392,10 +394,8 @@ g_steal_pointer (gpointer pp)
 	return ref;
 }
 
-/* type safety */
 #define g_steal_pointer(pp) \
-  (0 ? (*(pp)) : (g_steal_pointer) (pp))
-#endif
+  (0 ? (*(pp)) : (_g_steal_pointer) (pp))
 
 
 static inline gboolean

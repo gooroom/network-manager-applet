@@ -1,4 +1,3 @@
-/* -*- Mode: C; tab-width: 4; indent-tabs-mode: t; c-basic-offset: 4 -*- */
 /* NetworkManager -- Network link manager
  *
  * This library is free software; you can redistribute it and/or
@@ -28,5 +27,17 @@
 		(cmd); \
 		G_GNUC_END_IGNORE_DEPRECATIONS \
 	})
+
+#define _NMU_SEC_SAE ((NMUtilsSecurityType) 9)
+#if !NM_CHECK_VERSION (1,22,0)
+#define NMU_SEC_SAE _NMU_SEC_SAE
+#endif
+G_STATIC_ASSERT(NMU_SEC_SAE == _NMU_SEC_SAE);
+
+#define _NMU_SEC_OWE ((NMUtilsSecurityType) 10)
+#if !NM_CHECK_VERSION (1,24,0)
+#define NMU_SEC_OWE _NMU_SEC_OWE
+#endif
+G_STATIC_ASSERT(NMU_SEC_OWE == _NMU_SEC_OWE);
 
 #endif /* __NM_LIBNM_COMPAT_H__ */

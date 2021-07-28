@@ -1,21 +1,7 @@
-/* -*- Mode: C; tab-width: 4; indent-tabs-mode: t; c-basic-offset: 4 -*- */
+// SPDX-License-Identifier: GPL-2.0+
 /* NetworkManager Connection editor -- Connection editor for NetworkManager
  *
  * Dan Williams <dcbw@redhat.com>
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * Copyright 2008 - 2014 Red Hat, Inc.
  */
@@ -98,7 +84,6 @@ typedef struct {
 	gboolean    (*inter_page_change)  (CEPage *self);
 } CEPageClass;
 
-
 typedef CEPage* (*CEPageNewFunc)(NMConnectionEditor *editor,
                                  NMConnection *connection,
                                  GtkWindow *parent,
@@ -159,7 +144,7 @@ NMConnectionEditor *ce_page_new_editor (CEPage *self,
 
 void ce_spin_automatic_val (GtkSpinButton *spin, int defvalue);
 void ce_spin_default_val (GtkSpinButton *spin, int defvalue);
-
+void ce_spin_off_val (GtkSpinButton *spin, int defvalue);
 int ce_get_property_default (NMSetting *setting, const char *property_name);
 
 void ce_page_complete_init (CEPage *self,
@@ -200,7 +185,6 @@ CEPage *ce_page_new (GType page_type,
                      const char *ui_resource,
                      const char *widget_name,
                      const char *title);
-
 
 #endif  /* __CE_PAGE_H__ */
 

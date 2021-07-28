@@ -1,22 +1,8 @@
-/* -*- Mode: C; tab-width: 4; indent-tabs-mode: t; c-basic-offset: 4 -*- */
+// SPDX-License-Identifier: GPL-2.0+
 /* ap-menu-item.c - Class to represent a Wifi access point 
  *
  * Jonathan Blandford <jrb@redhat.com>
  * Dan Williams <dcbw@redhat.com>
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * Copyright (C) 2005 - 2010 Red Hat, Inc.
  */
@@ -180,8 +166,19 @@ nm_mb_menu_item_new (const char *connection_name,
 	/* And the strength icon, if we have strength information at all */
 	if (enabled && strength) {
 		const char *icon_name = mobile_helper_get_quality_icon_name (strength);
+		GdkPixbuf *icon = nma_icon_check_and_load (icon_name, applet);
 
-		gtk_image_set_from_pixbuf (GTK_IMAGE (priv->strength), nma_icon_check_and_load (icon_name, applet));
+		if (INDICATOR_ENABLED (applet)) {
+			/* app_indicator only uses GdkPixbuf */
+			gtk_image_set_from_pixbuf (GTK_IMAGE (priv->strength), icon);
+		} else {
+			int scale = gtk_widget_get_scale_factor (GTK_WIDGET (priv->strength));
+			cairo_surface_t *surface;
+
+			surface = gdk_cairo_surface_create_from_pixbuf (icon, scale, NULL);
+			gtk_image_set_from_surface (GTK_IMAGE (priv->strength), surface);
+			cairo_surface_destroy (surface);
+		}
 	}
 
 	return GTK_WIDGET (item);

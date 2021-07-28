@@ -1,21 +1,7 @@
-/* -*- Mode: C; tab-width: 4; indent-tabs-mode: t; c-basic-offset: 4 -*- */
+// SPDX-License-Identifier: GPL-2.0+
 /* NetworkManager Applet -- allow user control over networking
  *
  * Dan Williams <dcbw@redhat.com>
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * Copyright 2008 - 2017 Red Hat, Inc.
  * Copyright 2008 Novell, Inc.
@@ -61,7 +47,7 @@ ethernet_new_auto_connection (NMDevice *device,
 	return TRUE;
 }
 
-static void
+static gboolean
 ethernet_add_menu_item (NMDevice *device,
                         gboolean multiple_devices,
                         const GPtrArray *connections,
@@ -72,6 +58,10 @@ ethernet_add_menu_item (NMDevice *device,
 	char *text;
 	GtkWidget *item;
 	gboolean carrier = TRUE;
+
+	if (nm_device_get_state (device) == NM_DEVICE_STATE_UNMANAGED) {
+		return FALSE;
+	}
 
 	if (multiple_devices) {
 		const char *desc;
@@ -121,6 +111,8 @@ ethernet_add_menu_item (NMDevice *device,
 		else
 			applet_add_default_connection_item (device, DEFAULT_ETHERNET_NAME, carrier, menu, applet);
 	}
+
+	return TRUE;
 }
 
 static void

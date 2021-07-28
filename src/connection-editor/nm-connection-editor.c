@@ -1,23 +1,9 @@
-/* -*- Mode: C; tab-width: 4; indent-tabs-mode: t; c-basic-offset: 4 -*- */
+// SPDX-License-Identifier: GPL-2.0+
 /* NetworkManager Connection editor -- Connection editor for NetworkManager
  *
  * Rodrigo Moya <rodrigo@gnome-db.org>
  * Dan Williams <dcbw@redhat.com>
  * Tambet Ingo <tambet@gmail.com>
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * Copyright 2007 - 2017 Red Hat, Inc.
  * Copyright 2007 - 2008 Novell, Inc.
@@ -62,6 +48,7 @@
 #include "page-vlan.h"
 #include "page-dcb.h"
 #include "page-macsec.h"
+#include "page-wireguard.h"
 #include "ce-polkit-button.h"
 #include "vpn-helpers.h"
 #include "eap-method.h"
@@ -1051,6 +1038,9 @@ nm_connection_editor_set_connection (NMConnectionEditor *editor,
 			goto out;
 		if (!add_page (editor, ce_page_8021x_security_new, editor->connection, error))
 			goto out;
+	} else if (!strcmp (connection_type, NM_SETTING_WIREGUARD_SETTING_NAME)) {
+		if (!add_page (editor, ce_page_wireguard_new, editor->connection, error))
+			goto out;
 	} else {
 		g_warning ("Unhandled setting type '%s'", connection_type);
 	}
@@ -1192,8 +1182,9 @@ updated_connection_cb (GObject *connection,
 	NMConnectionEditor *self = NM_CONNECTION_EDITOR (user_data);
 	GError *error = NULL;
 
-	nm_remote_connection_commit_changes_finish (NM_REMOTE_CONNECTION (connection),
-	                                            result, &error);
+	if (!nm_remote_connection_commit_changes_finish (NM_REMOTE_CONNECTION (connection),
+	                                                 result, &error))
+		g_message ("Error saving connection: %s", error->message);
 
 	/* Clear secrets so they don't lay around in memory; they'll get requested
 	 * again anyway next time the connection is edited.

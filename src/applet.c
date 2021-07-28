@@ -1,19 +1,5 @@
-/* -*- Mode: C; tab-width: 4; indent-tabs-mode: t; c-basic-offset: 4 -*- */
+// SPDX-License-Identifier: GPL-2.0+
 /* NetworkManager Applet -- allow user control over networking
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  * Copyright (C) 2004 - 2017 Red Hat, Inc.
  * Copyright (C) 2005 - 2008 Novell, Inc.
@@ -56,12 +42,6 @@ extern gboolean shell_debug;
 extern gboolean with_agent;
 extern gboolean with_appindicator;
 
-#ifdef WITH_APPINDICATOR
-#define INDICATOR_ENABLED(a) ((a)->app_indicator)
-#else
-#define INDICATOR_ENABLED(a) (FALSE)
-#endif  /* WITH_APPINDICATOR */
-
 G_DEFINE_TYPE (NMApplet, nma, G_TYPE_APPLICATION)
 
 /********************************************************************/
@@ -101,6 +81,46 @@ applet_stop_wifi_scan (NMApplet *applet, gpointer unused)
 {
 	nm_clear_g_source (&applet->wifi_scan_id);
 }
+
+#ifdef WITH_APPINDICATOR
+/* Work around ubuntu libappindicator not emitting the "show"/"hide" signals,
+ * see https://bugs.launchpad.net/ubuntu/+source/libappindicator/+bug/522152.
+ * There will be no periodic Wi-Fi access point updates but at least there
+ * will be one each time the menu is opened.
+ */
+static void
+applet_menu_about_to_show_cb (NMApplet *applet, gpointer unused)
+{
+	applet_request_wifi_scan (applet);
+}
+
+static void
+applet_workaround_show_cb (NMApplet *applet, gpointer unused)
+{
+	GObject *menu_server;
+	GObject *root_menu_item;
+
+	g_object_get (applet->app_indicator, "dbus-menu-server", &menu_server, NULL);
+	g_object_get (menu_server, "root-node", &root_menu_item, NULL);
+
+	/* If libappindicator doesn't emit "show" and "hide" signals when the
+	 * menu is opened/closed, there will be exactly one "show" signal when
+	 * the menu is constructed.  Subscribe to DBusmenuMenuItem's
+	 * "about-to-show" signal to work around this.  If we're receiving the
+	 * "show" signal for the second time the workaround wasn't needed and
+	 * we can undo it.
+	 */
+	if (!applet->app_indicator_show_signal_received) {
+		applet->app_indicator_show_signal_received = TRUE;
+		g_signal_connect_swapped (root_menu_item, "about-to-show", G_CALLBACK (applet_menu_about_to_show_cb), applet);
+	} else {
+		GtkMenu *menu = app_indicator_get_menu (applet->app_indicator);
+
+		g_signal_handlers_disconnect_by_func (root_menu_item, applet_menu_about_to_show_cb, applet);
+		g_signal_handlers_disconnect_by_func (menu, applet_workaround_show_cb, applet);
+	}
+}
+#endif
 
 static inline NMADeviceClass *
 get_device_class (NMDevice *device, NMApplet *applet)
@@ -1365,6 +1385,7 @@ add_device_items (NMDeviceType type, const GPtrArray *all_devices,
 		NMADeviceClass *dclass;
 		NMConnection *active;
 		GPtrArray *connections;
+		gboolean added;
 
 		dclass = get_device_class (device, applet);
 		if (!dclass)
@@ -1373,11 +1394,11 @@ add_device_items (NMDeviceType type, const GPtrArray *all_devices,
 		connections = nm_device_filter_connections (device, all_connections);
 		active = applet_find_active_connection_for_device (device, applet, NULL);
 
-		dclass->add_menu_item (device, n_devices > 1, connections, active, menu, applet);
+		added = dclass->add_menu_item (device, n_devices > 1, connections, active, menu, applet);
 
 		g_ptr_array_unref (connections);
 
-		if (INDICATOR_ENABLED (applet))
+		if (INDICATOR_ENABLED (applet) && added)
 			gtk_menu_shell_append (GTK_MENU_SHELL (menu), gtk_separator_menu_item_new ());
 	}
 
@@ -2012,6 +2033,9 @@ applet_update_menu (gpointer user_data)
 			app_indicator_set_menu (applet->app_indicator, menu);
 			g_signal_connect_swapped (menu, "show", G_CALLBACK (applet_start_wifi_scan), applet);
 			g_signal_connect_swapped (menu, "hide", G_CALLBACK (applet_stop_wifi_scan), applet);
+
+			/* Work around ubuntu libappindicator not emitting the above signals in runtime */
+			g_signal_connect_swapped (menu, "show", G_CALLBACK (applet_workaround_show_cb), applet);
 		}
 #else
 		g_return_val_if_reached (G_SOURCE_REMOVE);
@@ -3006,6 +3030,7 @@ nma_icon_check_and_load (const char *name, NMApplet *applet)
 {
 	GError *error = NULL;
 	GdkPixbuf *icon;
+	int scale;
 
 	g_assert (name != NULL);
 	g_assert (applet != NULL);
@@ -3014,10 +3039,12 @@ nma_icon_check_and_load (const char *name, NMApplet *applet)
 	if (g_hash_table_lookup_extended (applet->icon_cache, name, NULL, (gpointer) &icon))
 		return icon;
 
+	scale = gdk_window_get_scale_factor (gdk_get_default_root_window ());
+
 	/* Try to load the icon; if the load fails, log the problem, and set
 	 * the icon to the fallback icon if requested.
 	 */
-	if (!(icon = gtk_icon_theme_load_icon (applet->icon_theme, name, applet->icon_size, GTK_ICON_LOOKUP_FORCE_SIZE, &error))) {
+	if (!(icon = gtk_icon_theme_load_icon_for_scale (applet->icon_theme, name, applet->icon_size, scale, GTK_ICON_LOOKUP_FORCE_SIZE, &error))) {
 		g_warning ("failed to load icon \"%s\": %s", name, error->message);
 		g_clear_error (&error);
 		icon = nm_g_object_ref (applet->fallback_icon);
@@ -3424,4 +3451,3 @@ static void nma_class_init (NMAppletClass *klass)
 
 	oclass->finalize = finalize;
 }
-
