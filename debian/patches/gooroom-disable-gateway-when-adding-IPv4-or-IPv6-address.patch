@@ -1,0 +1,64 @@
+diff --git a/src/connection-editor/page-ip4.c b/src/connection-editor/page-ip4.c
+index 72a6233..0fcd834 100644
+--- a/src/connection-editor/page-ip4.c
++++ b/src/connection-editor/page-ip4.c
+@@ -1076,6 +1076,9 @@ cell_error_data_func (GtkTreeViewColumn *tree_column,
+ 	const char *color = NULL;
+ 	guint32 prefix;
+ 	gboolean invalid = FALSE;
++	GtkTreeIter first_iter;
++	GtkTreePath *first_path;
++	GtkTreePath *path;
+ 
+ 	gtk_tree_model_get (tree_model, iter, col, &value, -1);
+ 
+@@ -1090,6 +1093,17 @@ cell_error_data_func (GtkTreeViewColumn *tree_column,
+ 		/* Check gateway against address and prefix */
+ 		if (!invalid && possibly_wrong_gateway (tree_model, iter, value))
+ 			color = "#DDC000"; /* darker than "yellow", else selected text is hard to read */
++
++		gtk_tree_model_get_iter_first(tree_model, &first_iter);
++		first_path = gtk_tree_model_get_path(tree_model, &first_iter);
++		path = gtk_tree_model_get_path(tree_model, iter);
++		if (gtk_tree_path_compare(first_path, path) != 0) {
++			g_object_set (G_OBJECT(cell), "editable", FALSE, NULL);
++			color = NULL;
++		}
++		else {
++			g_object_set (G_OBJECT(cell), "editable", TRUE, NULL);
++		}
+ 	} else
+ 		g_warn_if_reached ();
+ 
+diff --git a/src/connection-editor/page-ip6.c b/src/connection-editor/page-ip6.c
+index be1c64f..e927435 100644
+--- a/src/connection-editor/page-ip6.c
++++ b/src/connection-editor/page-ip6.c
+@@ -1078,6 +1078,9 @@ cell_error_data_func (GtkTreeViewColumn *tree_column,
+ 	char *value = NULL;
+ 	const char *color = NULL;
+ 	gboolean invalid = FALSE;
++	GtkTreeIter first_iter;
++	GtkTreePath *first_path;
++	GtkTreePath *path;
+ 
+ 	gtk_tree_model_get (tree_model, iter, col, &value, -1);
+ 
+@@ -1092,6 +1095,17 @@ cell_error_data_func (GtkTreeViewColumn *tree_column,
+ 		/* Check gateway against address and prefix */
+ 		if (!invalid && possibly_wrong_gateway (tree_model, iter, value))
+ 			color = "#DDC000"; /* darker than "yellow", else selected text is hard to read */
++
++		gtk_tree_model_get_iter_first(tree_model, &first_iter);
++		first_path = gtk_tree_model_get_path(tree_model, &first_iter);
++		path = gtk_tree_model_get_path(tree_model, iter);
++		if (gtk_tree_path_compare(first_path, path) != 0) {
++			g_object_set (G_OBJECT(cell), "editable", FALSE, NULL);
++			color = NULL;
++		}
++		else {
++			g_object_set (G_OBJECT(cell), "editable", TRUE, NULL);
++		}
+ 	} else
+ 		g_warn_if_reached ();
+ 
