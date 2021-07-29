@@ -1,0 +1,30 @@
+diff --git a/src/connection-editor/page-ip4.c b/src/connection-editor/page-ip4.c
+index a2200ac..72a6233 100644
+--- a/src/connection-editor/page-ip4.c
++++ b/src/connection-editor/page-ip4.c
+@@ -325,6 +325,10 @@ method_changed (GtkComboBox *combo, gpointer user_data)
+ 		}
+ 	}
+ 
++	GtkTreeModel *addr_model = gtk_tree_view_get_model (priv->addr_list);
++	int num_rows = gtk_tree_model_iter_n_children (addr_model, NULL);
++	gtk_widget_set_sensitive (GTK_WIDGET (priv->addr_delete), num_rows > 0);
++
+ 	if (method == IP4_METHOD_SHARED) {
+ 		GtkTreeModel *model;
+ 		gboolean iter_valid;
+diff --git a/src/connection-editor/page-ip6.c b/src/connection-editor/page-ip6.c
+index cf552cb..be1c64f 100644
+--- a/src/connection-editor/page-ip6.c
++++ b/src/connection-editor/page-ip6.c
+@@ -332,6 +332,10 @@ method_changed (GtkComboBox *combo, gpointer user_data)
+ 		}
+ 	}
+ 
++	GtkTreeModel *addr_model = gtk_tree_view_get_model (priv->addr_list);
++	int num_rows = gtk_tree_model_iter_n_children (addr_model, NULL);
++	gtk_widget_set_sensitive (GTK_WIDGET (priv->addr_delete), num_rows > 0);
++
+ 	gtk_widget_set_sensitive (priv->dns_servers_label, dns_enabled);
+ 	if (method_auto)
+ 		gtk_label_set_text_with_mnemonic (GTK_LABEL (priv->dns_servers_label), _("Additional DNS ser_vers"));
