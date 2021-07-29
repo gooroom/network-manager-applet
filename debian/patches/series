@@ -6,3 +6,4 @@ gooroom-addr-delete-button-sensitive.patch
 gooroom-wifi-channel-set-range.patch
 gooroom-nm-connection-list-sorting.patch
 gooroom-wifi-refresh-channel-when-mode-changed.patch
+gooroom-remove-title-from-setting-error-message.patch
