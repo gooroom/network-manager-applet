@@ -1,0 +1,45 @@
+diff --git a/src/applet.c b/src/applet.c
+index 7815fd6..e48fb7b 100644
+--- a/src/applet.c
++++ b/src/applet.c
+@@ -2383,9 +2383,27 @@ foo_manager_permission_changed (NMClient *client,
+                                 gpointer user_data)
+ {
+ 	NMApplet *applet = NM_APPLET (user_data);
++    gboolean wifi_hw_enabled;
+ 
+-	if (permission <= NM_CLIENT_PERMISSION_LAST)
++	if (permission <= NM_CLIENT_PERMISSION_LAST) {
+ 		applet->permissions[permission] = result;
++
++        if (permission == NM_CLIENT_PERMISSION_ENABLE_DISABLE_WIFI &&
++            applet->permissions_prev[permission] != result) {
++
++            applet->permissions_prev[permission] = result;
++            wifi_hw_enabled = nm_client_wireless_hardware_get_enabled (applet->nm_client);
++            gtk_widget_set_sensitive (GTK_WIDGET (applet->wifi_enabled_item),
++                                      wifi_hw_enabled && is_permission_yes (applet, NM_CLIENT_PERMISSION_ENABLE_DISABLE_WIFI));
++
++        }
++        else if (permission == NM_CLIENT_PERMISSION_ENABLE_DISABLE_NETWORK &&
++                 applet->permissions_prev[permission] != result) {
++
++            gtk_widget_set_sensitive (applet->networking_enabled_item,
++                                      is_permission_yes (applet, NM_CLIENT_PERMISSION_ENABLE_DISABLE_NETWORK));           
++        }
++    }
+ }
+ 
+ static void
+diff --git a/src/applet.h b/src/applet.h
+index 2bc2246..ce628b1 100644
+--- a/src/applet.h
++++ b/src/applet.h
+@@ -85,6 +85,7 @@ typedef struct {
+ 
+ 	/* Permissions */
+ 	NMClientPermissionResult permissions[NM_CLIENT_PERMISSION_LAST + 1];
++	NMClientPermissionResult permissions_prev[NM_CLIENT_PERMISSION_LAST + 1];
+ 
+ 	/* Device classes */
+ 	NMADeviceClass *ethernet_class;
