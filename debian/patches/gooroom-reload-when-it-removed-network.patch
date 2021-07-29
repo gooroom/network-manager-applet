@@ -1,0 +1,14 @@
+diff --git a/src/applet.c b/src/applet.c
+index 4de9c7b..7815fd6 100644
+--- a/src/applet.c
++++ b/src/applet.c
+@@ -3317,6 +3317,9 @@ register_agent (NMApplet *applet)
+ 		g_signal_connect_swapped (applet->nm_client, NM_CLIENT_CONNECTION_ADDED,
+ 		                          G_CALLBACK (applet_schedule_update_menu),
+ 		                          applet);
++		g_signal_connect_swapped (applet->nm_client, NM_CLIENT_CONNECTION_REMOVED,
++		                          G_CALLBACK (applet_schedule_update_menu),
++		                          applet);
+ 	}
+ }
+ 

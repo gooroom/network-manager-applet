@@ -8,3 +8,4 @@ gooroom-nm-connection-list-sorting.patch
 gooroom-wifi-refresh-channel-when-mode-changed.patch
 gooroom-remove-title-from-setting-error-message.patch
 gooroom-do-not-show-detail-error-message.patch
+gooroom-reload-when-it-removed-network.patch
