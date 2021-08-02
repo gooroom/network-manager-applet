@@ -13,3 +13,4 @@ gooroom-disable-gateway-when-adding-IPv4-or-IPv6-address.patch
 gooroom-fixed-it-Network-and-Wi-Fi-check-menu.patch
 gooroom-connection-delete-dialog-set-title.patch
 gooroom-modify-glade-margin.patch
+gooroom_ko.po.patch
