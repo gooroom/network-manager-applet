@@ -14,3 +14,4 @@ gooroom-fixed-it-Network-and-Wi-Fi-check-menu.patch
 gooroom-connection-delete-dialog-set-title.patch
 gooroom-modify-glade-margin.patch
 gooroom_ko.po.patch
+gooroom-translation-merge.patch
