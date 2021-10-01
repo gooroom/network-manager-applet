@@ -1,3 +1,10 @@
+network-manager-applet (1.8.22-2ubuntu1+grm2u6) eoan; urgency=medium
+
+  [ cjheo ]
+  * [e7127724] Added dbus method for showing network infomation dialog
+
+ -- Gooroom Autobuilder <jenkins@gooroom.kr>  Fri, 01 Oct 2021 20:30:57 +0900
+
 network-manager-applet (1.8.22-2ubuntu1+grm2u5) eoan; urgency=medium
 
   [ boyeon.choi ]
