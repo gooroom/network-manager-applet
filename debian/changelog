@@ -1,3 +1,23 @@
+network-manager-applet (1.20.0-3+grm3u1) unstable; urgency=medium
+
+  [ seolhee.sun ]
+  * [c77f8a0a] gooroom-hide-VPN-list-combo-box.patch 오류 수정
+  * [de3a7586] 네트워크 연결편집 화면의 IPv4 및 IPv6 설정에서 방식(Method) 변경시 삭제버튼 활성/비활성 오류 수정
+  * [8ad87c70] [Bug:1913] 와이파이 연결 편집 시 채널에 대한 범위 설정
+  * [c0a11206] [Bug:2077]네트워크 연결편집 다이얼로그의 컬럼 정렬 미동작 수정
+  * [978e839b] [Bug:2414] Update channels when changing mode in wifi settings dialog
+  * [4ffa34fe] Remove error title from setting error message
+  * [8501b2fa] Don't show detail error message from error dialog
+  * [f18b99a9] [Bug:1968] Fixed tray menu reload when it removed network in dialog
+  * [3060035a] [Bug:2369] Added patch to disable gateway when adding IPv4 or IPv6 address
+  * [a0def75f] [Bug:2530] Fixed it Network and WiFi check menu
+  * [f147ac92] [Bug:2570] Specified the title for the connection delete dialog
+  * [a1f29f9e] Added patch that have removed the margin property from ui files
+  * [82fc5a01] Update gooroom ko.po from gooroom-translations
+  * [cec3f849] Update nm-applet translation based gooroom-3.0
+
+ -- Gooroom Autobuilder <jenkins@gooroom.kr>  Sat, 04 Dec 2021 21:12:12 +0900
+
 network-manager-applet (1.20.0-3) unstable; urgency=medium
 
   * applet: support activating WireGuard connections as VPNs (Closes: #983641)
