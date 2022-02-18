@@ -1,0 +1,13 @@
+diff --git a/src/connection-editor/page-8021x-security.c b/src/connection-editor/page-8021x-security.c
+index dde816c..2c5c5f8 100644
+--- a/src/connection-editor/page-8021x-security.c
++++ b/src/connection-editor/page-8021x-security.c
+@@ -71,7 +71,7 @@ finish_setup (CEPage8021xSecurity *self, gpointer user_data)
+ 
+ 	gtk_box_pack_start (GTK_BOX (parent->page), GTK_WIDGET (priv->enabled), FALSE, TRUE, 12);
+ 	gtk_box_pack_start (GTK_BOX (parent->page), GTK_WIDGET (priv->security), TRUE, TRUE, 0);
+-	gtk_widget_show (parent->page);
++	gtk_widget_show_all (parent->page);
+ }
+ 
+ CEPage *
