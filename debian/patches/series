@@ -16,3 +16,4 @@ gooroom-modify-glade-margin.patch
 gooroom_ko.po.patch
 gooroom-translation-merge.patch
 gooroom-do-not-show-ethernet-8021x-security-checkbox.patch
+gooroom-add-translation-page-mobile-planname.patch

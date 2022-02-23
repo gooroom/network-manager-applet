@@ -1,0 +1,21 @@
+diff --git a/src/connection-editor/page-mobile.c b/src/connection-editor/page-mobile.c
+index 0dd3c3b..196601c 100644
+--- a/src/connection-editor/page-mobile.c
++++ b/src/connection-editor/page-mobile.c
+@@ -427,6 +427,7 @@ new_connection_mobile_wizard_done (NMAMobileWizard *wizard,
+                                    gpointer user_data)
+ {
+ 	WizardInfo *info = user_data;
++	gchar *conn_title = _("connection");
+ 
+ 	if (!canceled && method) {
+ 		NMSetting *type_setting;
+@@ -463,7 +464,7 @@ new_connection_mobile_wizard_done (NMAMobileWizard *wizard,
+ 		if (method->plan_name)
+ 			detail = g_strdup_printf ("%s %s %%d", method->provider_name, method->plan_name);
+ 		else
+-			detail = g_strdup_printf ("%s connection %%d", method->provider_name);
++			detail = g_strdup_printf ("%s %s %%d", method->provider_name, conn_title);
+ 
+ 		_ensure_connection_own (&info->connection);
+ 		ce_page_complete_connection (info->connection,
