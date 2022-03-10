@@ -1,0 +1,21 @@
+diff --git a/src/connection-editor/page-bluetooth.c b/src/connection-editor/page-bluetooth.c
+index 026a504..e12fc2e 100644
+--- a/src/connection-editor/page-bluetooth.c
++++ b/src/connection-editor/page-bluetooth.c
+@@ -199,6 +199,7 @@ new_connection_mobile_wizard_done (NMAMobileWizard *wizard,
+ 	WizardInfo *info = user_data;
+ 	char *detail = NULL;
+ 	NMSetting *type_setting = NULL;
++    gchar *conn_title = _("connection");
+ 
+ 	if (canceled)
+ 		goto out;
+@@ -232,7 +233,7 @@ new_connection_mobile_wizard_done (NMAMobileWizard *wizard,
+ 		if (method->plan_name)
+ 			detail = g_strdup_printf ("%s %s %%d", method->provider_name, method->plan_name);
+ 		else
+-			detail = g_strdup_printf ("%s connection %%d", method->provider_name);
++			detail = g_strdup_printf ("%s %s %%d", method->provider_name, conn_title);
+ 	}
+ 
+ 	if (!detail)
