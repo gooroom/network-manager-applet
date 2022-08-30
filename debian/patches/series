@@ -18,3 +18,10 @@ gooroom-translation-merge.patch
 gooroom-do-not-show-ethernet-8021x-security-checkbox.patch
 gooroom-add-translation-page-mobile-planname.patch
 gooroom-add-translation-page-bluetooth-planname.patch
+Allow-creation-of-connections-without-admin-privileges.patch
+lp341684_device_sensitive_disconnect_notify.patch
+lp460144_correctly_update_notification.patch
+Have-the-appindicator-enabled-by-default.patch
+Make-policykit-restricted-actions-insensitive.patch
+Support-hiding-rather-than-desensitizing-disallowed-items.patch
+gooroom-add-dbus-method-for-showing-network-information-dialog.patch

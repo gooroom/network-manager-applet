@@ -1,0 +1,146 @@
+diff --git a/src/applet-device-wifi.c b/src/applet-device-wifi.c
+index 7c118a1..c20f41a 100644
+--- a/src/applet-device-wifi.c
++++ b/src/applet-device-wifi.c
+@@ -211,7 +211,6 @@ nma_menu_add_hidden_network_item (GtkWidget *menu, NMApplet *applet)
+ 	gtk_misc_set_alignment (GTK_MISC (label), 0.0, 0.5);
+ 	gtk_container_add (GTK_CONTAINER (menu_item), label);
+ 	gtk_widget_show_all (menu_item);
+-	gtk_menu_shell_append (GTK_MENU_SHELL (menu), menu_item);
+ 	g_signal_connect_swapped (menu_item, "activate",
+ 	                          G_CALLBACK (applet_wifi_connect_to_hidden_network),
+ 	                          applet);
+@@ -242,6 +241,13 @@ nma_menu_add_hidden_network_item (GtkWidget *menu, NMApplet *applet)
+     }
+ 
+     gtk_widget_set_sensitive (GTK_WIDGET (menu_item), allowed);
++    if (!allowed && applet->hide_policy_items) {
++        /* don't add the item if it should be hidden */
++        /* TODO: is this the final solution? */
++        g_object_ref_sink (menu_item);
++        g_object_unref (menu_item);
++    } else
++        gtk_menu_shell_append (GTK_MENU_SHELL (menu), menu_item);
+ }
+ 
+ gboolean
+@@ -289,13 +295,21 @@ nma_menu_add_create_network_item (GtkWidget *menu, NMApplet *applet)
+ 	gtk_misc_set_alignment (GTK_MISC (label), 0.0, 0.5);
+ 	gtk_container_add (GTK_CONTAINER (menu_item), label);
+ 	gtk_widget_show_all (menu_item);
+-	gtk_menu_shell_append (GTK_MENU_SHELL (menu), menu_item);
+ 	g_signal_connect_swapped (menu_item, "activate",
+ 	                          G_CALLBACK (applet_wifi_create_wifi_network),
+ 	                          applet);
+ 
+-	if (!applet_wifi_can_create_wifi_network (applet))
+-		gtk_widget_set_sensitive (GTK_WIDGET (menu_item), FALSE);
++    if (!applet_wifi_can_create_wifi_network (applet)) {
++        gtk_widget_set_sensitive (GTK_WIDGET (menu_item), FALSE);
++        if (applet->hide_policy_items) {
++            /* don't add the item if it should be hidden */
++            /* TODO: is this the final solution? */
++            g_object_ref_sink (menu_item);
++            g_object_unref (menu_item);
++            return;
++        }
++    }
++    gtk_menu_shell_append (GTK_MENU_SHELL (menu), menu_item);
+ }
+ 
+ typedef struct {
+diff --git a/src/applet.c b/src/applet.c
+index 505cf91..bfcfa8f 100644
+--- a/src/applet.c
++++ b/src/applet.c
+@@ -1518,6 +1518,8 @@ nma_menu_add_vpn_submenu (GtkWidget *menu, NMApplet *applet)
+ 	GtkMenuItem *item;
+ 	GPtrArray *list;
+ 	int i;
++    gboolean configure_allowed;
++    gboolean disconnect_allowed;
+ 
+ 	vpn_menu = GTK_MENU (gtk_menu_new ());
+ 
+@@ -1547,9 +1549,16 @@ nma_menu_add_vpn_submenu (GtkWidget *menu, NMApplet *applet)
+ 		if (   state != NM_STATE_CONNECTED_LOCAL
+ 		    && state != NM_STATE_CONNECTED_SITE
+             && state != NM_STATE_CONNECTED_GLOBAL
+-            && !is_permission_yes (applet, NM_CLIENT_PERMISSION_NETWORK_CONTROL))
++            && !disconnect_allowed){
+ 			gtk_widget_set_sensitive (GTK_WIDGET (item), FALSE);
+-		else
++            if (!applet->hide_policy_items)
++                gtk_menu_shell_append (GTK_MENU_SHELL (vpn_menu), GTK_WIDGET (item));
++            else {
++                /* TODO: is this the final solution? */
++                g_object_ref_sink (item);
++                g_object_unref (item);
++            }
++		} else
+ 			gtk_widget_set_sensitive (GTK_WIDGET (item), TRUE);
+ 
+ 		gtk_check_menu_item_set_active (GTK_CHECK_MENU_ITEM (item), !!active);
+@@ -1565,7 +1574,10 @@ nma_menu_add_vpn_submenu (GtkWidget *menu, NMApplet *applet)
+ 
+ 	/* Draw a separator, but only if we have VPN connections above it */
+ 	if (list->len) {
+-		nma_menu_add_separator_item (GTK_WIDGET (vpn_menu));
++        if (   !applet->hide_policy_items
++            || configure_allowed
++            || disconnect_allowed)
++            nma_menu_add_separator_item (GTK_WIDGET (vpn_menu)); /* separator is added if there will be items under it */
+ 		item = GTK_MENU_ITEM (gtk_menu_item_new_with_mnemonic (_("_Configure VPN…")));
+ 		g_signal_connect (item, "activate", G_CALLBACK (nma_menu_configure_vpn_item_activate), applet);
+ 	} else {
+@@ -1573,11 +1585,17 @@ nma_menu_add_vpn_submenu (GtkWidget *menu, NMApplet *applet)
+ 		g_signal_connect (item, "activate", G_CALLBACK (nma_menu_add_vpn_item_activate), applet);
+ 	}
+ 	gtk_menu_shell_append (GTK_MENU_SHELL (vpn_menu), GTK_WIDGET (item));
+-    if (   is_permission_yes (applet, NM_CLIENT_PERMISSION_SETTINGS_MODIFY_SYSTEM)
+-        || is_permission_yes (applet, NM_CLIENT_PERMISSION_SETTINGS_MODIFY_OWN)) {
++    if (configure_allowed) {
+         gtk_widget_set_sensitive (GTK_WIDGET (item), TRUE);
+     } else {
+         gtk_widget_set_sensitive (GTK_WIDGET (item), FALSE);
++        if (!applet->hide_policy_items) {
++            gtk_menu_shell_append (GTK_MENU_SHELL (vpn_menu), GTK_WIDGET (item));
++        } else {
++            /* TODO: is this the final solution? */
++            g_object_ref_sink (item);
++            g_object_unref (item);
++        }
+     }
+ 
+ 	gtk_widget_show (GTK_WIDGET (item));
+@@ -1851,6 +1869,7 @@ nma_context_menu_update (NMApplet *applet)
+          * so set the "Edit Connections..." menu item insensitive.
+          */
+         gtk_widget_set_sensitive (applet->connections_menu_item, FALSE);
++        gtk_widget_set_visible (applet->connections_menu_item, !applet->hide_policy_items);
+     }
+ }
+ 
+@@ -3652,6 +3671,10 @@ static void nma_init (NMApplet *applet)
+ 
+ 	g_signal_connect (applet, "startup", G_CALLBACK (applet_startup), NULL);
+ 	g_signal_connect (applet, "activate", G_CALLBACK (applet_activate), NULL);
++
++    applet->hide_policy_items = FALSE;
++    if (getenv ("NM_APPLET_HIDE_POLICY_ITEMS"))
++        applet->hide_policy_items = TRUE;
+ }
+ 
+ static void nma_class_init (NMAppletClass *klass)
+diff --git a/src/applet.h b/src/applet.h
+index 504c7b6..9e83c94 100644
+--- a/src/applet.h
++++ b/src/applet.h
+@@ -82,6 +82,7 @@ typedef struct {
+ #endif
+ 
+ 	gboolean visible;
++    gboolean hide_policy_items;
+ 
+ 	/* Permissions */
+ 	NMClientPermissionResult permissions[NM_CLIENT_PERMISSION_LAST + 1];

@@ -1,0 +1,27 @@
+diff --git a/src/main.c b/src/main.c
+index 2308e61..b31c65f 100644
+--- a/src/main.c
++++ b/src/main.c
+@@ -17,7 +17,7 @@
+ 
+ gboolean shell_debug = FALSE;
+ gboolean with_agent = TRUE;
+-gboolean with_appindicator = FALSE;
++gboolean with_appindicator = TRUE;
+ 
+ static void
+ usage (const char *progname)
+@@ -47,11 +47,9 @@ int main (int argc, char *argv[])
+ 			shell_debug = TRUE;
+ 		else if (!strcmp (argv[i], "--no-agent"))
+ 			with_agent = FALSE;
+-		else if (!strcmp (argv[i], "--indicator")) {
++		else if (!strcmp (argv[i], "--no-indicator")) {
+ #ifdef WITH_APPINDICATOR
+-			with_appindicator = TRUE;
+-#else
+-			g_error ("Error: --indicator requested but indicator support not available");
++			with_appindicator = FALSE;
+ #endif
+ 		}
+ 	}
