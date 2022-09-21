@@ -1,0 +1,14 @@
+diff --git a/src/applet-device-wifi.c b/src/applet-device-wifi.c
+index c20f41a..8fdc69a 100644
+--- a/src/applet-device-wifi.c
++++ b/src/applet-device-wifi.c
+@@ -506,9 +506,7 @@ wifi_new_auto_connection (NMDevice *device,
+ 
+ 	connection = nm_simple_connection_new ();
+ 
+-	/* Make the new connection available only for the current user */
+ 	s_con = (NMSettingConnection *) nm_setting_connection_new ();
+-	nm_setting_connection_add_permission (s_con, "user", g_get_user_name (), NULL);
+ 	nm_connection_add_setting (connection, NM_SETTING (s_con));
+ 
+ 	ssid = nm_access_point_get_ssid (ap);
