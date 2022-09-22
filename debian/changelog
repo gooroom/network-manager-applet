@@ -1,3 +1,13 @@
+network-manager-applet (1.20.0-3+grm3u4) unstable; urgency=medium
+
+  [ seolhee.sun ]
+  * [f323d49c] Update rebase for gooroom-3.0
+
+  [ cjheo ]
+  * [3afae24c] Allow-creation-of-connections-without-admin-privileges.patch 에서 누락된 내용추가
+
+ -- Gooroom Autobuilder <jenkins@gooroom.kr>  Thu, 22 Sep 2022 12:10:52 +0900
+
 network-manager-applet (1.20.0-3+grm3u3) unstable; urgency=medium
 
   [ seolhee.sun ]
