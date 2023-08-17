@@ -26,3 +26,4 @@ Make-policykit-restricted-actions-insensitive.patch
 Support-hiding-rather-than-desensitizing-disallowed-items.patch
 gooroom-add-dbus-method-for-showing-network-information-dialog.patch
 Allow-creation-of-connections-without-admin-privileges-2.patch
+gooroom-reset-connection-list-when-occured-error.patch

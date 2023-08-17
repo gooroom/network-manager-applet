@@ -1,0 +1,45 @@
+diff --git a/src/connection-editor/nm-connection-editor.c b/src/connection-editor/nm-connection-editor.c
+index c384cc6..b80b71a 100644
+--- a/src/connection-editor/nm-connection-editor.c
++++ b/src/connection-editor/nm-connection-editor.c
+@@ -493,6 +493,7 @@ dispose (GObject *object)
+ 
+ 	g_clear_object (&editor->connection);
+ 	g_clear_object (&editor->orig_connection);
++	g_clear_object (&editor->tmp_connection);
+ 
+ 	if (editor->window) {
+ 		gtk_widget_destroy (editor->window);
+@@ -966,6 +967,7 @@ nm_connection_editor_set_connection (NMConnectionEditor *editor,
+ 	editor->connection = nm_simple_connection_new_clone (orig_connection);
+ 
+ 	editor->orig_connection = g_object_ref (orig_connection);
++	editor->tmp_connection = nm_simple_connection_new_clone (orig_connection);
+ 	nm_connection_editor_update_title (editor);
+ 
+ 	/* Handle CA cert ignore stuff */
+@@ -1172,6 +1174,12 @@ static void
+ update_complete (NMConnectionEditor *self, GError *error)
+ {
+ 	nm_connection_editor_set_busy (self, FALSE);
++
++	if (error && error->code == 1) {
++		nm_connection_replace_settings_from_connection (self->orig_connection,
++                                                            self->tmp_connection);
++	}
++
+ 	g_signal_emit (self, editor_signals[EDITOR_DONE], 0, GTK_RESPONSE_OK);
+ }
+ 
+diff --git a/src/connection-editor/nm-connection-editor.h b/src/connection-editor/nm-connection-editor.h
+index d660e57..3653ea1 100644
+--- a/src/connection-editor/nm-connection-editor.h
++++ b/src/connection-editor/nm-connection-editor.h
+@@ -34,6 +34,7 @@ typedef struct {
+ 	/* private data */
+ 	NMConnection *connection;
+ 	NMConnection *orig_connection;
++	NMConnection *tmp_connection;
+ 	gboolean is_new_connection;
+ 
+ 	GetSecretsInfo *secrets_call;
