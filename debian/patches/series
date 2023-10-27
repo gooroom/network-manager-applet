@@ -4,3 +4,4 @@ lp341684_device_sensitive_disconnect_notify.patch
 Make-policykit-restricted-actions-insensitive.patch
 Support-hiding-rather-than-desensitizing-disallowed-items.patch
 gooroom-modify-glade-margin.patch
+gooroom-hide-VPN-list-combo-box.patch
