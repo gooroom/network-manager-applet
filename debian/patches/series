@@ -18,3 +18,4 @@ gooroom-connection-delete-dialog-set-title.patch
 gooroom-add-dbus-method-for-showing-network-information-dialog.patch
 gooroom-do-not-show-ethernet-8021x-security-checkbox.patch
 gooroom-add-translation-page-mobile-planname.patch
+gooroom-add-translation-page-bluetooth-planname.patch
