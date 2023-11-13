@@ -1,3 +1,10 @@
+network-manager-applet (1.20.0-3+grm3u5) unstable; urgency=medium
+
+  [ seolhee.sun ]
+  * [494dd8ee] Connection list reset when occured error in editor
+
+ -- Gooroom Autobuilder <jenkins@gooroom.kr>  Mon, 13 Nov 2023 16:18:09 +0900
+
 network-manager-applet (1.20.0-3+grm3u4) unstable; urgency=medium
 
   [ seolhee.sun ]
