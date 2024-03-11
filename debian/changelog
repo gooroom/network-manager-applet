@@ -1,3 +1,28 @@
+network-manager-applet (1.30.0-2+grm4u1) unstable; urgency=medium
+
+  [ seolhee.sun ]
+  * [531708f3] Rebase patches for gooroom-4.0
+  * [c67b9997] Added patch that have removed the margin property from ui files
+  * [d9bc79f7] 연결편집에서 '자동으로 가상 사설망에 연결'체크시 VPN 목록이 없으면 목록을 표시하는 콤보박스를 숨기도록 설정
+  * [56c43805] 네트워크 연결편집 화면의 IPv4 및 IPv6 설정에서 방식(Method) 변경시 삭제버튼 활성/비활성 오류 수정
+  * [5e587b47] [Bug:1913] 와이파이 연결 편집 시 채널에 대한 범위 설정
+  * [436c1a23] [Bug:2077]네트워크 연결편집 다이얼로그의 컬럼 정렬 미동작 수정
+  * [69318e14] [Bug:2414] Update channels when changing mode in wifi settings dialog
+  * [746b0d83] Remove error title from setting error message
+  * [7509a709] Don't show detail error message from error dialog
+  * [de4b33ef] [Bug:1968]Fixed tray menu reload when it removed network in dialog
+  * [3e302515] [Bug:2369]Added patch to disable gateway when adding IPv4 or IPv6 address
+  * [270ff511] [Bug:2530]Fixed it Network and WiFi check menu
+  * [8356f093] [Bug:2570] Specified the title for the connection delete dialog
+  * [8a4a66a3] Added dbus method for showing network information dialog
+  * [e156e561] [Bug:3892]Show checkbox in 802.1x security tab of ethernet page
+  * [54541e17] [Bug:4267]Add translation mobile connection title
+  * [7a9e96a1] [Bug:4267]Add translation bluetooth mobile connection title
+  * [1fbfe829] Connection list reset when occured error in editor
+  * [b3bb1fff] Rename patch files
+
+ -- Gooroom Autobuilder <jenkins@gooroom.kr>  Mon, 11 Mar 2024 09:00:20 +0900
+
 network-manager-applet (1.30.0-2) unstable; urgency=medium
 
   * Reclaim org.gnome.nm-applet schema from libnma.
