@@ -20,3 +20,4 @@ gooroom-14-do-not-show-ethernet-8021x-security-checkbox.patch
 gooroom-15-add-translation-page-mobile-planname.patch
 gooroom-16-add-translation-page-bluetooth-planname.patch
 gooroom-17-reset-connection-list-when-occured-error.patch
+gooroom-18-fix-for-support-hiding-rather-than-desensitizing-disallowed-items.patch
