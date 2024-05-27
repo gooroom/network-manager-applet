@@ -1,3 +1,10 @@
+network-manager-applet (1.30.0-2+grm4u2) unstable; urgency=medium
+
+  [ seolhee.sun ]
+  * [5bf9efac] [Bug:5689,5693,5690]Fix the previous patch
+
+ -- Gooroom Autobuilder <jenkins@gooroom.kr>  Mon, 27 May 2024 17:57:47 +0900
+
 network-manager-applet (1.30.0-2+grm4u1) unstable; urgency=medium
 
   [ seolhee.sun ]
