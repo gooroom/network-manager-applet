@@ -1,0 +1,13 @@
+diff --git a/src/applet-device-wifi.c b/src/applet-device-wifi.c
+index d8fbe78..c932ee0 100644
+--- a/src/applet-device-wifi.c
++++ b/src/applet-device-wifi.c
+@@ -180,6 +180,8 @@ show_ignore_focus_stealing_prevention (GtkWidget *widget)
+ {
+ 	gtk_widget_realize (widget);
+ 	gtk_widget_show (widget);
++    gtk_window_set_keep_above (GTK_WINDOW (widget), TRUE);
++    gtk_window_set_position (GTK_WINDOW (widget), GTK_WIN_POS_CENTER_ALWAYS);
+ 	gtk_window_present (GTK_WINDOW (widget));
+ }
+ 
